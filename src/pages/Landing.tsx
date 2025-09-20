@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
-import { PortalCard } from "@/components/ui/portal-card";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { RegisterForm } from "@/components/auth/RegisterForm";
-import { User, Stethoscope, Calendar, Shield, Users, Clock, Heart } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Heart, Users, Calendar, Shield, Stethoscope } from "lucide-react";
 
 type ViewMode = 'landing' | 'login' | 'register';
 type UserRole = 'patient' | 'doctor' | 'pharmacist';
@@ -35,110 +37,150 @@ export default function Landing() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      <Header 
-        title="MediCloud" 
-        subtitle="Patient Record System" 
-      />
-      
-      {/* Hero Section */}
-      <div className="container mx-auto px-6 py-16">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-foreground mb-6 leading-tight">
-            Healthcare Management System
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Streamline patient care with our comprehensive cloud-based platform. Secure, 
-            efficient, and designed for modern healthcare workflows.
-          </p>
-        </div>
-
-        {/* Portal Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          <PortalCard
-            title="Patient Portal"
-            description="Book appointments, view records, and manage your healthcare journey"
-            icon={<User className="w-8 h-8 text-white" />}
-            loginVariant="patient"
-            onLogin={() => handleLogin('patient')}
-            onRegister={() => handleRegister('patient')}
-          />
-          
-          <PortalCard
-            title="Doctor Portal"
-            description="Manage patients, view appointments, and provide quality care"
-            icon={<Stethoscope className="w-8 h-8 text-white" />}
-            loginVariant="doctor"
-            onLogin={() => handleLogin('doctor')}
-            onRegister={() => handleRegister('doctor')}
-          />
-          
-          <PortalCard
-            title="Pharmacist"
-            description="View prescriptions and assist patients with medicines"
-            icon={<Calendar className="w-8 h-8 text-white" />}
-            loginVariant="pharmacist"
-            onLogin={() => handleLogin('pharmacist')}
-            onRegister={() => handleRegister('pharmacist')}
-            showRegister={true}
-          />
-        </div>
-
-        {/* Features Section */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-foreground mb-8">
-            Why Choose MediCloud?
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-medical-blue rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-8 h-8 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-md shadow-sm border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-blue-600 text-white rounded-lg px-2 py-1 font-bold text-2xl">M</div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">MediCloud</h1>
+                <p className="text-sm text-gray-600">Patient Record System</p>
               </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2">Secure</h3>
-              <p className="text-muted-foreground">HIPAA compliant with end-to-end encryption</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-medical-green rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2">Role-Based</h3>
-              <p className="text-muted-foreground">Tailored access for different user types</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-medical-purple rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2">Efficient</h3>
-              <p className="text-muted-foreground">Streamlined appointment management</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-medical-blue-light rounded-full flex items-center justify-center mx-auto mb-4">
-                <Heart className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2">Patient-Centered</h3>
-              <p className="text-muted-foreground">Focus on improving patient outcomes</p>
             </div>
           </div>
         </div>
-      </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="py-5 px-4">
+        <div className="container mx-auto text-center">
+          <h2 className="text-5xl font-bold text-gray-900 mb-5">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700">
+              Healthcare Management System
+            </span>
+          </h2>
+          <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
+            Streamline patient care with our comprehensive cloud-based platform.
+            Secure, efficient, and designed for modern healthcare workflows.
+          </p>
+
+          {/* Role Selection Cards */}
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {/* Patient Card */}
+            <Card className="card-hover group cursor-pointer">
+              <CardHeader className="pb-4">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center group-hover:from-blue-600 group-hover:to-blue-700 transition-all duration-300">
+                  <Users className="h-8 w-8 text-white" />
+                </div>
+                <CardTitle className="text-2xl">Patient Portal</CardTitle>
+                <CardDescription className="text-base">
+                  Book appointments, view records, and manage your healthcare journey
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button className="w-full btn-medical bg-gradient-to-r from-blue-600 to-blue-700" onClick={() => handleLogin('patient')}>Login</Button>
+                <Button variant="outline" className="w-full border-blue-200 text-blue-700 hover:bg-blue-50 mt-2" onClick={() => handleRegister('patient')}>
+                  Register as Patient
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Doctor Card */}
+            <Card className="card-hover group cursor-pointer">
+              <CardHeader className="pb-4">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center group-hover:from-green-600 group-hover:to-emerald-700 transition-all duration-300">
+                  <Stethoscope className="w-6 h-6 text-white" />
+                </div>
+                <CardTitle className="text-2xl">Doctor Portal</CardTitle>
+                <CardDescription className="text-base">
+                  Manage patients, view appointments, and provide quality care
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800" onClick={() => handleLogin('doctor')}>
+                  Login
+                </Button>
+                <Button variant="outline" className="w-full border-green-200 text-green-700 hover:bg-green-50 mt-2" onClick={() => handleRegister('doctor')}>
+                  Register as Doctor
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Pharmacist Card */}
+            <Card className="card-hover group cursor-pointer h-full flex flex-col justify-between">
+              <CardHeader className="pb-4">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center group-hover:from-purple-600 group-hover:to-indigo-700 transition-all duration-300">
+                  <Calendar className="h-8 w-8 text-white" />
+                </div>
+                <CardTitle className="text-2xl">Pharmacist</CardTitle>
+                <CardDescription className="text-base">
+                  View prescriptions and assist patients with medicines
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="mt-auto space-y-3">
+                <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800" onClick={() => handleLogin('pharmacist')}>
+                  Login
+                </Button>
+                <Button variant="outline" className="w-full border-purple-200 text-purple-700 hover:bg-purple-50 mt-2" onClick={() => handleRegister('pharmacist')}>
+                  Register as Pharmacist
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 bg-white/50 backdrop-blur-sm">
+        <div className="container mx-auto px-4">
+          <h3 className="text-3xl font-bold text-center text-gray-900 mb-7">
+            Why Choose MediCloud?
+          </h3>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+                <Shield className="h-6 w-6 text-blue-600" />
+              </div>
+              <h4 className="font-semibold text-gray-900 mb-2">Secure</h4>
+              <p className="text-gray-600 text-sm">HIPAA compliant with end-to-end encryption</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                <Users className="h-6 w-6 text-green-600" />
+              </div>
+              <h4 className="font-semibold text-gray-900 mb-2">Role-Based</h4>
+              <p className="text-gray-600 text-sm">Tailored access for different user types</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 bg-purple-100 rounded-full flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-purple-600" />
+              </div>
+              <h4 className="font-semibold text-gray-900 mb-2">Efficient</h4>
+              <p className="text-gray-600 text-sm">Streamlined appointment management</p>
+            </div>
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 bg-indigo-100 rounded-full flex items-center justify-center">
+                <Heart className="h-6 w-6 text-indigo-600" />
+              </div>
+              <h4 className="font-semibold text-gray-900 mb-2">Patient-Centered</h4>
+              <p className="text-gray-600 text-sm">Focus on improving patient outcomes</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
-      <footer className="bg-card border-t mt-16">
-        <div className="container mx-auto px-6 py-8 text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-8 h-8 bg-gradient-medical rounded-full flex items-center justify-center">
-              <span className="text-white font-bold">M</span>
-            </div>
+      <footer className="bg-gray-900 text-white py-8 text-center">
+        <div className="container mx-auto px-4 text-center">
+          <div className="flex items-center justify-center space-x-2 mb-2">
+            <div className="bg-blue-600 text-white rounded-lg px-2 py-1 font-bold text-sm">M</div>
             <span className="text-xl font-bold">MediCloud</span>
           </div>
-          <p className="text-muted-foreground">
-            © 2025 Dnyanesh Badave | MediCloud
-          </p>
         </div>
+        &copy; 2025 Dnyanesh Badave | MediCloud
       </footer>
     </div>
   );
