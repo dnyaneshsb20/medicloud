@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Heart, Mail, Lock } from "lucide-react";
+import { Heart, Mail, Lock, Stethoscope} from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 const DoctorLogin = () => {
@@ -36,20 +36,19 @@ const DoctorLogin = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-2 text-2xl font-bold text-gray-900">
-            <div className="p-2 bg-gradient-to-r from-green-600 to-emerald-700 rounded-lg">
-              <Heart className="h-6 w-6 text-white" />
-            </div>
-            <span>MediCloud</span>
+            <div className="bg-gradient-to-r from-green-600 to-emerald-700 text-white rounded-lg px-2 py-1 font-bold text-2xl">M</div>
+            <span className="text-3xl">MediCloud</span>
           </Link>
-          <p className="text-gray-600 mt-2">Doctor Portal</p>
         </div>
 
         <Card className="card-hover">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Doctor Login</CardTitle>
-            <CardDescription>
-              Access your patient management dashboard
-            </CardDescription>
+            <div className="flex items-center gap-3 justify-center">
+              <div className="p-2 bg-gradient-to-r from-green-600 to-emerald-700 rounded-lg">
+                <Stethoscope className="w-5 h-5 text-white" />
+              </div>
+              <CardTitle>Doctor Login</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
