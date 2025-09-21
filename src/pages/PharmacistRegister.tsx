@@ -83,14 +83,14 @@ const PharmacistRegister = () => {
 
             <Button
               type="submit"
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-700 text-white"
             >
               Register
             </Button>
 
             <p className="text-sm text-center mt-2">
               Already have an account?{" "}
-              <Link to="/pharmacist-login" className="text-blue-600 hover:underline">
+              <Link to="/pharmacist/login" className="text-blue-600 hover:underline">
                 Login
               </Link>
             </p>
