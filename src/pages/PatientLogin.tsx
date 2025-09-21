@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Lock, Heart } from "lucide-react";
+import { Mail, Lock, Heart, Users } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
+
 
 const PatientLogin = () => {
   const [email, setEmail] = useState("");
@@ -35,20 +36,19 @@ const PatientLogin = () => {
             to="/"
             className="inline-flex items-center space-x-2 text-2xl font-bold text-gray-900"
           >
-            <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg">
-              <Heart className="h-6 w-6 text-white" />
-            </div>
-            <span>MediCloud</span>
+            <div className="bg-blue-600 text-white rounded-lg px-2 py-1 font-bold text-2xl">M</div>
+            <span className="text-3xl">MediCloud</span>
           </Link>
-          <p className="text-gray-600 mt-2">Patient Portal</p>
         </div>
 
         <Card className="card-hover">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Patient Login</CardTitle>
-            <CardDescription>
-              Sign in to access your patient dashboard
-            </CardDescription>
+            <div className="flex items-center gap-3 justify-center">
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+              <CardTitle className="text-2xl">Patient Login</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">

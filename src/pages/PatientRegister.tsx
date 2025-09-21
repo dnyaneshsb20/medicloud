@@ -64,20 +64,19 @@ const PatientRegister = () => {
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-2 text-2xl font-bold text-gray-900">
-            <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
-              <Heart className="h-6 w-6 text-white" />
-            </div>
+              <div className="bg-blue-600 text-white rounded-lg px-2 py-1 font-bold text-2xl">M</div>
             <span>MediCloud</span>
           </Link>
-          <p className="text-gray-600 mt-2">Patient Registration</p>
         </div>
 
         <Card className="card-hover">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Create Patient Account</CardTitle>
-            <CardDescription>
-              Join MediCloud to manage your healthcare journey
-            </CardDescription>
+            <div className="flex items-center gap-3 justify-center">
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg">
+                <User className="h-4 w-4 text-white" />
+              </div>
+              <CardTitle className="text-2xl">Create Patient Account</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -228,7 +227,7 @@ const PatientRegister = () => {
 
               <Button
                 type="submit"
-                className="w-full btn-medical"
+                className="w-full btn-medical bg-gradient-to-r from-blue-500 to-blue-600"
                 disabled={isLoading}
               >
                 {isLoading ? "Creating Account..." : "Create Account"}
