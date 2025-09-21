@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Users, Clock, FileText, User, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 
 interface Appointment {
   id: string;
@@ -34,22 +35,96 @@ interface DoctorProfile {
   available_to: string;
 }
 
+interface Patient {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  date_of_birth: string | null;
+  gender: string | null;
+  documents_count: number;
+  last_uploaded?: string;
+}
+
+
 export default function DoctorDashboard() {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [profile, setProfile] = useState<DoctorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'patients' | 'profile'>('dashboard');
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    full_name: "",
+    mobile_number: "",
+    specialization: "",
+    license_number: "",
+    consultation_fee: 0,
+    available_from: "",
+    available_to: "",
+  });
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoadingPatients, setIsLoadingPatients] = useState(true);
 
   useEffect(() => {
     if (user) {
-      fetchDoctorData();
+      fetchDoctorData(); // your existing doctor profile fetch
+
+      // Fetch patients for this doctor
+      const fetchPatients = async () => {
+        setIsLoadingPatients(true);
+
+        const { data, error } = await supabase
+          .from("medical_records")
+          .select(`
+      patient_id,
+      patients (
+        id,
+        full_name,
+        email,
+        phone,
+        date_of_birth,
+        gender
+      ),
+      created_at
+    `)
+          .eq("doctor_id", user.id);
+
+        if (error) {
+          console.error("Error fetching patients:", error);
+        } else {
+          const patientMap: Record<string, any> = {};
+          data?.forEach((record: any) => {
+            const p = record.patients;
+            if (!p) return;
+
+            if (!patientMap[p.id]) {
+              patientMap[p.id] = {
+                ...p,
+                records_count: 1,
+                last_recorded: record.created_at,
+              };
+            } else {
+              patientMap[p.id].records_count += 1;
+              if (record.created_at > patientMap[p.id].last_recorded) {
+                patientMap[p.id].last_recorded = record.created_at;
+              }
+            }
+          });
+
+          setPatients(Object.values(patientMap)); // update state
+        }
+
+        setIsLoadingPatients(false);
+      };
+
+      fetchPatients();
     }
   }, [user]);
 
   const fetchDoctorData = async () => {
     if (!user) return;
-    
+
     try {
       // Fetch doctor profile
       const { data: doctorData, error: profileError } = await supabase
@@ -128,50 +203,58 @@ export default function DoctorDashboard() {
     if (hour < 18) return 'Good Afternoon';
     return 'Good Evening';
   };
+  // Inside your component, above the return()
+  const viewPatientDetails = (patientId: string) => {
+    // For now, just log it
+    console.log("View details for patient:", patientId);
+
+    // TODO: You can open a modal or navigate to a patient detail page
+  };
+
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header 
-        title="MediCloud" 
+    <div className="min-h-screen bg-background bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+      <Header
+        title="MediCloud"
         subtitle="Doctor Portal"
         showLogout={true}
       />
-      
+
       <div className="container mx-auto px-6 py-8">
         {/* Greeting */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">
-            {getGreeting()}, Dr. {profile?.full_name?.split(' ')[0]}!
+            {getGreeting()}! Dr. {profile?.full_name}.
           </h1>
           <p className="text-muted-foreground">Here's your practice overview for today</p>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex space-x-1 mb-8 bg-muted p-1 rounded-lg w-fit">
+        <div className="flex space-x-1 mb-8 bg-muted p-1 rounded-lg w-full bg-white">
           <Button
             variant={activeTab === 'dashboard' ? 'default' : 'ghost'}
-            className={activeTab === 'dashboard' ? 'bg-medical-green text-white' : ''}
+            className={`flex-1 ${activeTab === 'dashboard' ? 'bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800' : ''}`}
             onClick={() => setActiveTab('dashboard')}
           >
             Dashboard
           </Button>
           <Button
             variant={activeTab === 'appointments' ? 'default' : 'ghost'}
-            className={activeTab === 'appointments' ? 'bg-medical-green text-white' : ''}
+            className={`flex-1 ${activeTab === 'appointments' ? 'bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800' : ''}`}
             onClick={() => setActiveTab('appointments')}
           >
             Today's Appointments
           </Button>
           <Button
             variant={activeTab === 'patients' ? 'default' : 'ghost'}
-            className={activeTab === 'patients' ? 'bg-medical-green text-white' : ''}
+            className={`flex-1 ${activeTab === 'patients' ? 'bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800' : ''}`}
             onClick={() => setActiveTab('patients')}
           >
             All Patients
           </Button>
           <Button
             variant={activeTab === 'profile' ? 'default' : 'ghost'}
-            className={activeTab === 'profile' ? 'bg-medical-green text-white' : ''}
+            className={`flex-1 ${activeTab === 'profile' ? 'bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800' : ''}`}
             onClick={() => setActiveTab('profile')}
           >
             Profile
@@ -281,7 +364,7 @@ export default function DoctorDashboard() {
                               <Button variant="outline" size="sm">
                                 View Patient
                               </Button>
-                              <Button 
+                              <Button
                                 size="sm"
                                 className="bg-medical-blue hover:bg-medical-blue-light text-white"
                               >
@@ -304,59 +387,172 @@ export default function DoctorDashboard() {
           </div>
         )}
 
+        {/* All Patients Tab */}
+        {activeTab === 'patients' && (
+          <div className="flex flex-col items-center space-y-6 w-full">
+            <h2 className="text-2xl font-bold text-center w-full max-w-5xl">My Patients</h2>
+
+            {isLoadingPatients ? (
+              <p>Loading patients...</p>
+            ) : patients.length === 0 ? (
+              <p>No patients found.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 w-full max-w-5xl">
+                {patients.map((patient) => (
+                  <Card key={patient.id} className="shadow-card p-4 flex flex-col justify-between">
+                    <div className="space-y-1">
+                      <p className="font-semibold">{patient.full_name}</p>
+                      <p className="text-sm text-muted-foreground">Email: {patient.email}</p>
+                      <p className="text-sm text-muted-foreground">Phone: {patient.phone}</p>
+                      <p className="text-sm text-muted-foreground">DOB: {patient.date_of_birth}</p>
+                      <p className="text-sm text-muted-foreground">Gender: {patient.gender}</p>
+                    </div>
+                    <Button
+                      className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => viewPatientDetails(patient.id)}
+                    >
+                      View Details
+                    </Button>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Other tabs content would go here */}
         {activeTab === 'profile' && profile && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Doctor Profile</h2>
-            <p className="text-muted-foreground">Your professional information and credentials</p>
-
+          <div className="space-y-6 w-full">
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle>Professional Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Full Name */}
                   <div>
                     <p className="text-sm text-muted-foreground">Full Name</p>
-                    <p className="font-semibold">{profile.full_name}</p>
+                    {isEditing ? (
+                      <Input
+                        value={formData.full_name}
+                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                      />
+                    ) : (
+                      <p className="font-semibold">Dr. {profile.full_name}</p>
+                    )}
                   </div>
 
+                  {/* Email (readonly) */}
                   <div>
                     <p className="text-sm text-muted-foreground">Email</p>
                     <p className="font-semibold">{profile.email}</p>
                   </div>
 
+                  {/* Phone */}
                   <div>
                     <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-semibold">{profile.mobile_number || 'Not provided'}</p>
+                    {isEditing ? (
+                      <Input
+                        value={formData.mobile_number}
+                        onChange={(e) => setFormData({ ...formData, mobile_number: e.target.value })}
+                      />
+                    ) : (
+                      <p className="font-semibold">{profile.mobile_number || 'Not provided'}</p>
+                    )}
                   </div>
 
+                  {/* Specialization */}
                   <div>
                     <p className="text-sm text-muted-foreground">Specialization</p>
-                    <p className="font-semibold">{profile.specialization}</p>
+                    {isEditing ? (
+                      <Input
+                        value={formData.specialization}
+                        onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                      />
+                    ) : (
+                      <p className="font-semibold">{profile.specialization}</p>
+                    )}
                   </div>
 
+                  {/* License Number */}
                   <div>
                     <p className="text-sm text-muted-foreground">License Number</p>
-                    <p className="font-semibold">{profile.license_number}</p>
+                    {isEditing ? (
+                      <Input
+                        value={formData.license_number}
+                        onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
+                      />
+                    ) : (
+                      <p className="font-semibold">{profile.license_number}</p>
+                    )}
                   </div>
 
+                  {/* Consultation Fee */}
                   <div>
                     <p className="text-sm text-muted-foreground">Consultation Fee</p>
-                    <p className="font-semibold">₹{profile.consultation_fee}</p>
+                    {isEditing ? (
+                      <Input
+                        type="number"
+                        value={formData.consultation_fee}
+                        onChange={(e) => setFormData({ ...formData, consultation_fee: Number(e.target.value) })}
+                      />
+                    ) : (
+                      <p className="font-semibold">₹{profile.consultation_fee}</p>
+                    )}
                   </div>
                 </div>
 
+                {/* Available Hours */}
                 <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-2">Available Hours</p>
-                  <p className="font-semibold">
-                    {profile.available_from} - {profile.available_to}
-                  </p>
+                  <p className="text-sm text-muted-foreground mb-2">Available Timings</p>
+                  {isEditing ? (
+                    <div className="flex gap-2">
+                      <Input
+                        type="time"
+                        value={formData.available_from}
+                        onChange={(e) => setFormData({ ...formData, available_from: e.target.value })}
+                      />
+                      <span className="self-center">-</span>
+                      <Input
+                        type="time"
+                        value={formData.available_to}
+                        onChange={(e) => setFormData({ ...formData, available_to: e.target.value })}
+                      />
+                    </div>
+                  ) : (
+                    <p className="font-semibold">
+                      {profile.available_from} - {profile.available_to}
+                    </p>
+                  )}
                 </div>
 
+                {/* Edit / Update Button */}
                 <div className="pt-6">
-                  <Button className="bg-medical-green hover:bg-medical-green-light text-white">
-                    Edit Profile
+                  <Button
+                    className="bg-medical-green hover:bg-medical-green-light text-white"
+                    onClick={async () => {
+                      if (isEditing) {
+                        // Update doctor details in Supabase
+                        const { error } = await supabase
+                          .from("doctors")
+                          .update({ ...formData })
+                          .eq("id", profile.id);
+
+                        if (!error) {
+                          // Refresh profile data
+                          setProfile({ ...profile, ...formData });
+                          setIsEditing(false);
+                        } else {
+                          alert("Error updating profile: " + error.message);
+                        }
+                      } else {
+                        // Enable edit mode
+                        setFormData({ ...profile }); // populate formData
+                        setIsEditing(true);
+                      }
+                    }}
+                  >
+                    {isEditing ? "Update Details" : "Edit Profile"}
                   </Button>
                 </div>
               </CardContent>
