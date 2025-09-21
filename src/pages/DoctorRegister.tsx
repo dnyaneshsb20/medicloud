@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/supabase/supabaseClient";
-import { Heart, User, Mail, Lock, Phone, FileText, IndianRupee } from "lucide-react";
+import { Heart, User, Mail, Lock, Phone, FileText, IndianRupee, Stethoscope } from "lucide-react";
 
 const DoctorRegister = () => {
   const [formData, setFormData] = useState({
@@ -82,22 +82,23 @@ const DoctorRegister = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
-        <div className="text-center mb-8">
+        <div className="text-center mb-4 mt-8">
           <Link to="/" className="inline-flex items-center space-x-2 text-2xl font-bold text-gray-900">
-            <div className="p-2 bg-gradient-to-r from-green-600 to-emerald-700 rounded-lg">
-              <Heart className="h-6 w-6 text-white" />
+            <div className="bg-gradient-to-r from-green-600 to-emerald-700 text-white rounded-lg px-2 py-1 font-bold text-2xl">
+              M
             </div>
-            <span>MediCloud</span>
+            <span className="text-3xl">MediCloud</span>
           </Link>
-          <p className="text-gray-600 mt-2">Doctor Registration</p>
         </div>
 
         <Card className="card-hover">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Create Doctor Account</CardTitle>
-            <CardDescription>
-              Join MediCloud to manage your practice efficiently
-            </CardDescription>
+            <div className="flex items-center gap-3 justify-center">
+              <div className="p-2 bg-gradient-to-r from-green-600 to-emerald-700 rounded-lg">
+                <Stethoscope className="w-4 h-4 text-white" />
+              </div>
+              <CardTitle>Doctor Registration</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">

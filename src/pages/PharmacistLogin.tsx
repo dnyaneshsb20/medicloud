@@ -42,20 +42,21 @@ const PharmacistLogin = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-2 text-2xl font-bold text-gray-900">
-            <div className="p-2 bg-gradient-to-r from-purple-600 to-indigo-700 rounded-lg">
-              <Pill className="h-6 w-6 text-white" />
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white rounded-lg px-2 py-1 font-bold text-2xl">
+              M
             </div>
-            <span>MediCloud</span>
+            <span className="text-3xl">MediCloud</span>
           </Link>
-          <p className="text-gray-600 mt-2">Pharmacist Portal</p>
         </div>
 
         <Card className="card-hover">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Pharmacist Login</CardTitle>
-            <CardDescription>
-              Access prescriptions and manage medicines
-            </CardDescription>
+            <div className="flex items-center gap-3 justify-center">
+              <div className="p-2 bg-gradient-to-r from-purple-600 to-indigo-700 rounded-lg">
+                <Pill className="w-4 h-4 text-white" />
+              </div>
+              <CardTitle>Pharmacist Login</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
