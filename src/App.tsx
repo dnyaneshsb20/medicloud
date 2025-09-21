@@ -33,7 +33,7 @@ const App = () => (
             <Route 
               path="/patient/dashboard" 
               element={
-                <ProtectedRoute requiredRole="patient">
+                <ProtectedRoute>
                   <PatientDashboard />
                 </ProtectedRoute>
               } 
@@ -43,7 +43,7 @@ const App = () => (
             <Route 
               path="/doctor/dashboard" 
               element={
-                <ProtectedRoute requiredRole="doctor">
+                <ProtectedRoute>
                   <DoctorDashboard />
                 </ProtectedRoute>
               } 
@@ -52,7 +52,7 @@ const App = () => (
             <Route 
               path="/pharmacist/dashboard" 
               element={
-                <ProtectedRoute requiredRole="pharmacist">
+                <ProtectedRoute>
                   <PharmacistLogin />
                 </ProtectedRoute>
               } 
