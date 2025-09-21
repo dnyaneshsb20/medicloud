@@ -9,13 +9,14 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 // Import all pages
 import Index from "./pages/Index";
 import PatientLogin from "./pages/PatientLogin";
-// import PatientRegister from "./pages/PatientRegister";
+import PatientRegister from "./pages/PatientRegister";
 import PatientDashboard from "./pages/PatientDashboard";
 import DoctorLogin from "./pages/DoctorLogin";
-// import DoctorRegister from "./pages/DoctorRegister";
+import DoctorRegister from "./pages/DoctorRegister";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import NotFound from "./pages/NotFound";
 import PharmacistLogin from "./pages/PharmacistLogin";
+import PharmacistRegister from "./pages/PharmacistRegister";
 
 const queryClient = new QueryClient();
 
@@ -29,7 +30,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<PatientLogin />} />
-            {/* <Route path="/patient/register" element={<PatientRegister />} /> */}
+            <Route path="/patient/register" element={<PatientRegister />} />
             <Route 
               path="/patient/dashboard" 
               element={
@@ -39,7 +40,7 @@ const App = () => (
               } 
             />
             <Route path="/doctor/login" element={<DoctorLogin />} />
-            {/* <Route path="/doctor/register" element={<DoctorRegister />} /> */}
+            <Route path="/doctor/register" element={<DoctorRegister />} />
             <Route 
               path="/doctor/dashboard" 
               element={
@@ -49,6 +50,7 @@ const App = () => (
               } 
             />
             <Route path="/pharmacist/login" element={<PharmacistLogin />} />
+            <Route path="/pharmacist/register" element={<PharmacistRegister />} />
             <Route 
               path="/pharmacist/dashboard" 
               element={
