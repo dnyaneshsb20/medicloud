@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,36 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Heart, Mail, Lock } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { supabase } from "@/supabase/supabaseClient"; // or your correct import
 
 const DoctorLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { signIn, user } = useAuth();
-
-  useEffect(() => {
-    const checkIfDoctor = async () => {
-      if (!user) return;
-
-      const { data: doctorData, error } = await supabase
-        .from("doctors")
-        .select("id")
-        .eq("id", user.id)
-        .single();
-
-      if (doctorData && !error) {
-        navigate("/doctor/dashboard");
-      } else {
-        // Optional: sign out the user if not a doctor
-        // await signOut();
-        alert("Access denied. You are not a doctor.");
-      }
-    };
-
-    checkIfDoctor();
-  }, [user, navigate]);
+  const { signIn } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,19 +25,8 @@ const DoctorLogin = () => {
       return;
     }
 
-    // ✅ Check if this user is in doctors table
-    const { data: doctorData, error: doctorError } = await supabase
-      .from("doctors")
-      .select("id")
-      .eq("id", (await supabase.auth.getUser()).data.user.id)
-      .single();
-
-    if (doctorError || !doctorData) {
-      alert("Access denied: You are not registered as a doctor.");
-      setIsLoading(false);
-      return;
-    }
-
+    // ⛔️ Removed doctor role checking logic
+    // Directly navigate to doctor dashboard after successful sign in
     navigate("/doctor/dashboard");
     setIsLoading(false);
   };

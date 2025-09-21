@@ -48,19 +48,21 @@ export default function PatientDashboard() {
 
   const fetchPatientData = async () => {
     if (!user) return;
-    
+
     try {
-      // Fetch patient profile
+      // 🔹 Fetch patient profile
+      // (Future Role Check could go here to confirm `user.id` belongs to a patient)
       const { data: patientData, error: profileError } = await supabase
         .from('patients')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', user.id) // <-- relies only on logged-in user id
         .single();
 
       if (profileError) throw profileError;
       setProfile(patientData);
 
-      // Fetch appointments with doctor info
+      // 🔹 Fetch appointments with doctor info
+      // (Future Role Check could go here to confirm only patients access their appointments)
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
         .select(`
@@ -70,7 +72,7 @@ export default function PatientDashboard() {
             specialization
           )
         `)
-        .eq('patient_id', user.id)
+        .eq('patient_id', user.id) // <-- again tied to logged-in user id
         .order('appointment_date', { ascending: true });
 
       if (appointmentsError) throw appointmentsError;
@@ -118,12 +120,12 @@ export default function PatientDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header 
-        title="Patient Dashboard" 
+      <Header
+        title="Patient Dashboard"
         subtitle={`Welcome back, ${profile?.full_name}`}
         showLogout={true}
       />
-      
+
       <div className="container mx-auto px-6 py-8">
         {/* Navigation Tabs */}
         <div className="flex space-x-1 mb-8 bg-muted p-1 rounded-lg w-fit">
@@ -192,7 +194,7 @@ export default function PatientDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-sm text-muted-foreground">
-                    {recentAppointments[0] ? 
+                    {recentAppointments[0] ?
                       new Date(recentAppointments[0].appointment_date).toLocaleDateString() :
                       'No visits yet'
                     }
@@ -343,8 +345,8 @@ export default function PatientDashboard() {
                     <div>
                       <p className="text-sm text-muted-foreground">Date of Birth</p>
                       <p className="font-semibold">
-                        {profile.date_of_birth ? 
-                          new Date(profile.date_of_birth).toLocaleDateString() : 
+                        {profile.date_of_birth ?
+                          new Date(profile.date_of_birth).toLocaleDateString() :
                           'Not provided'
                         }
                       </p>

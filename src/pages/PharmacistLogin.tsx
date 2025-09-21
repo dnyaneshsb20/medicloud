@@ -1,39 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pill, Mail, Lock } from "lucide-react"; // changed icon to Pill
+import { Pill, Mail, Lock } from "lucide-react"; // Pill icon for pharmacist
 import { useAuth } from "@/components/auth/AuthProvider";
-import { supabase } from "@/supabase/supabaseClient";
+// import { supabase } from "@/supabase/supabaseClient"; // Not needed if no role checks
 
 const PharmacistLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { signIn, user } = useAuth();
+  const { signIn } = useAuth();
+  // const { user } = useAuth(); // user role checking removed for now
 
-  useEffect(() => {
-    const checkIfPharmacist = async () => {
-      if (!user) return;
-
-      const { data: pharmacistData, error } = await supabase
-        .from("pharmacists")
-        .select("id")
-        .eq("id", user.id)
-        .single();
-
-      if (pharmacistData && !error) {
-        navigate("/pharmacist/dashboard");
-      } else {
-        alert("Access denied. You are not a pharmacist.");
-      }
-    };
-
-    checkIfPharmacist();
-  }, [user, navigate]);
+  // 🔹 useEffect with role check removed for now
+  // useEffect(() => { ... }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,18 +30,8 @@ const PharmacistLogin = () => {
       return;
     }
 
-    // ✅ Check if this user is in pharmacists table
-    const { data: pharmacistData, error: pharmacistError } = await supabase
-      .from("pharmacists")
-      .select("id")
-      .eq("id", (await supabase.auth.getUser()).data.user.id)
-      .single();
-
-    if (pharmacistError || !pharmacistData) {
-      alert("Access denied: You are not registered as a pharmacist.");
-      setIsLoading(false);
-      return;
-    }
+    // 🔹 Role check removed for now
+    // Future: verify user.id exists in pharmacists table
 
     navigate("/pharmacist/dashboard");
     setIsLoading(false);
