@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, FileText, User, Clock, MapPin, Phone, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 
 interface Appointment {
   id: string;
@@ -21,25 +22,27 @@ interface Appointment {
   };
 }
 
-interface PatientProfile {
+interface UserProfile {
   id: string;
   full_name: string;
-  email: string;
-  phone: string;
-  date_of_birth: string;
-  gender: string;
-  address: string;
-  emergency_contact: string;
-  medical_history: string;
-  role?: "patient";
+  email?: string;
+  phone?: string;
+  date_of_birth?: string;
+  gender?: string;
+  address?: string;
+  emergency_contact?: string;
+  medical_history?: string;
+  role: "patient" | "doctor" | "pharmacist";
 }
 
 export default function PatientDashboard() {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [profile, setProfile] = useState<PatientProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'profile'>('dashboard');
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState<UserProfile>({} as UserProfile);
 
   useEffect(() => {
     if (!user) return;
@@ -53,7 +56,28 @@ export default function PatientDashboard() {
         .maybeSingle();
 
       if (!patientData) {
-        toast.error("You are not a patient");
+        // fetch role from doctors table
+        const { data: doctorData } = await supabase
+          .from("doctors")
+          .select("full_name")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (doctorData) {
+          setProfile({ id: user.id, full_name: doctorData.full_name, role: "doctor" });
+        } else {
+          // fetch role from pharmacists table
+          const { data: pharmacistData } = await supabase
+            .from("pharmacists")
+            .select("full_name")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if (pharmacistData) {
+            setProfile({ id: user.id, full_name: pharmacistData.full_name, role: "pharmacist" });
+          }
+        }
+
         setLoading(false);
         return;
       }
@@ -82,7 +106,7 @@ export default function PatientDashboard() {
         .single();
 
       if (profileError) throw profileError;
-      setProfile(patientData);
+      setProfile({ ...patientData, role: "patient" });
 
       // 🔹 Fetch appointments with doctor info
       // (Future Role Check could go here to confirm only patients access their appointments)
@@ -141,8 +165,15 @@ export default function PatientDashboard() {
     );
   }
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    else if (hour < 18) return "Good Afternoon";
+    else return "Good Evening";
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200">
       <Header
         title="Patient Dashboard"
         subtitle={`Welcome back, ${profile?.full_name}`}
@@ -150,25 +181,46 @@ export default function PatientDashboard() {
       />
 
       <div className="container mx-auto px-6 py-8">
+        {/* Greeting for Patient */}
+        <div className="mb-8">
+          {profile?.role === "patient" ? (
+            <>
+              <h1 className="text-3xl font-bold text-foreground">
+                {getGreeting()}! {profile.full_name}.
+              </h1>
+              <p className="text-muted-foreground">Here's your health overview for today</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-3xl font-bold text-foreground">
+                You are not a patient.
+              </h1>
+              <p className="text-muted-foreground">
+                Please log in as {profile?.role || "doctor/pharmacist"} to get the details.
+              </p>
+            </>
+          )}
+        </div>
+
         {/* Navigation Tabs */}
-        <div className="flex space-x-1 mb-8 bg-muted p-1 rounded-lg w-fit">
+        <div className="flex space-x-2 w-full mb-8 bg-muted p-1 rounded-lg bg-white">
           <Button
             variant={activeTab === 'dashboard' ? 'default' : 'ghost'}
-            className={activeTab === 'dashboard' ? 'bg-medical-blue text-white' : ''}
+            className={`flex-1 ${activeTab === 'dashboard' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700' : ''}`}
             onClick={() => setActiveTab('dashboard')}
           >
             Dashboard
           </Button>
           <Button
             variant={activeTab === 'appointments' ? 'default' : 'ghost'}
-            className={activeTab === 'appointments' ? 'bg-medical-blue text-white' : ''}
+            className={`flex-1 ${activeTab === 'appointments' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700' : ''}`}
             onClick={() => setActiveTab('appointments')}
           >
             Appointments
           </Button>
           <Button
             variant={activeTab === 'profile' ? 'default' : 'ghost'}
-            className={activeTab === 'profile' ? 'bg-medical-blue text-white' : ''}
+            className={`flex-1 ${activeTab === 'profile' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700' : ''}`}
             onClick={() => setActiveTab('profile')}
           >
             Profile
@@ -271,7 +323,7 @@ export default function PatientDashboard() {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">My Appointments</h2>
-              <Button className="bg-medical-blue hover:bg-medical-blue-light text-white">
+              <Button className="bg-gradient-to-r from-blue-500 to-blue-600 hover:bg-medical-blue-light text-white">
                 Book New Appointment
               </Button>
             </div>
@@ -330,94 +382,155 @@ export default function PatientDashboard() {
 
         {/* Profile Tab */}
         {activeTab === 'profile' && profile && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">My Profile</h2>
-
+          <div className="space-y-6 w-full">
             <Card className="shadow-card">
               <CardHeader>
                 <CardTitle>Personal Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex items-center space-x-3">
-                    <User className="w-5 h-5 text-medical-blue" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Full Name</p>
+                  {/* Full Name */}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Full Name</p>
+                    {isEditing ? (
+                      <Input
+                        value={formData.full_name}
+                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                      />
+                    ) : (
                       <p className="font-semibold">{profile.full_name}</p>
-                    </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <Mail className="w-5 h-5 text-medical-blue" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-semibold">{profile.email}</p>
-                    </div>
+                  {/* Email (readonly) */}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-semibold">{profile.email}</p>
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <Phone className="w-5 h-5 text-medical-blue" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Phone</p>
+                  {/* Phone */}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    {isEditing ? (
+                      <Input
+                        value={formData.phone || ''}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      />
+                    ) : (
                       <p className="font-semibold">{profile.phone || 'Not provided'}</p>
-                    </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <Calendar className="w-5 h-5 text-medical-blue" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Date of Birth</p>
+                  {/* Date of Birth */}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Date of Birth</p>
+                    {isEditing ? (
+                      <Input
+                        type="date"
+                        value={formData.date_of_birth || ''}
+                        onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                      />
+                    ) : (
                       <p className="font-semibold">
-                        {profile.date_of_birth ?
-                          new Date(profile.date_of_birth).toLocaleDateString() :
-                          'Not provided'
-                        }
+                        {profile.date_of_birth
+                          ? new Date(profile.date_of_birth).toLocaleDateString()
+                          : 'Not provided'}
                       </p>
-                    </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <User className="w-5 h-5 text-medical-blue" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Gender</p>
+                  {/* Gender */}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Gender</p>
+                    {isEditing ? (
+                      <select
+                        className="input input-bordered w-full"
+                        value={formData.gender || ''}
+                        onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                      </select>
+                    ) : (
                       <p className="font-semibold capitalize">{profile.gender || 'Not provided'}</p>
-                    </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <MapPin className="w-5 h-5 text-medical-blue" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Address</p>
+                  {/* Address */}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Address</p>
+                    {isEditing ? (
+                      <Input
+                        value={formData.address || ''}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      />
+                    ) : (
                       <p className="font-semibold">{profile.address || 'Not provided'}</p>
-                    </div>
+                    )}
                   </div>
-                </div>
 
-                <div className="pt-4 border-t">
-                  <div className="flex items-start space-x-3">
-                    <Phone className="w-5 h-5 text-medical-orange mt-1" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Emergency Contact</p>
+                  {/* Emergency Contact */}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Emergency Contact</p>
+                    {isEditing ? (
+                      <Input
+                        value={formData.emergency_contact || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, emergency_contact: e.target.value })
+                        }
+                      />
+                    ) : (
                       <p className="font-semibold">{profile.emergency_contact || 'Not provided'}</p>
-                    </div>
+                    )}
+                  </div>
+
+                  {/* Medical History */}
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-muted-foreground">Medical History</p>
+                    {isEditing ? (
+                      <textarea
+                        className="input input-bordered w-full"
+                        value={formData.medical_history || ''}
+                        onChange={(e) =>
+                          setFormData({ ...formData, medical_history: e.target.value })
+                        }
+                      />
+                    ) : (
+                      <p className="font-semibold">{profile.medical_history || 'Not provided'}</p>
+                    )}
                   </div>
                 </div>
 
-                {profile.medical_history && (
-                  <div className="pt-4 border-t">
-                    <div className="flex items-start space-x-3">
-                      <FileText className="w-5 h-5 text-medical-green mt-1" />
-                      <div className="flex-1">
-                        <p className="text-sm text-muted-foreground">Medical History</p>
-                        <p className="font-semibold">{profile.medical_history}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Edit / Update Button */}
+                <div className="pt-3">
+                  <Button
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+                    onClick={async () => {
+                      if (isEditing) {
+                        // Update patient details in Supabase
+                        const { role, ...updateData } = formData;
+                        const { error } = await supabase
+                          .from("patients")
+                          .update(updateData)
+                          .eq("id", profile.id);
 
-                <div className="pt-6">
-                  <Button className="bg-medical-blue hover:bg-medical-blue-light text-white">
-                    Edit Profile
+                        if (!error) {
+                          // Refresh profile data
+                          setProfile({ ...profile, ...updateData });
+                          setIsEditing(false);
+                        } else {
+                          alert("Error updating profile: " + error.message);
+                        }
+                      } else {
+                        // Enable edit mode
+                        setFormData({ ...profile }); // populate formData
+                        setIsEditing(true);
+                      }
+                    }}
+                  >
+                    {isEditing ? "Update Details" : "Edit Profile"}
                   </Button>
                 </div>
               </CardContent>

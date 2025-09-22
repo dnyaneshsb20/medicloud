@@ -2,7 +2,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Heart, Users, Calendar, Shield, Stethoscope } from "lucide-react";
+import { Heart, Users, Calendar, Shield, Stethoscope, BriefcaseMedical } from "lucide-react";
 
 const Index = () => {
   return (
@@ -49,7 +49,7 @@ const Index = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Link to="/login">
+                <Link to="/patient/login">
                   <Button className="w-full btn-medical bg-gradient-to-r from-blue-500 to-blue-600">Login</Button>
                 </Link>
                 <Link to="/patient/register">
@@ -90,7 +90,7 @@ const Index = () => {
             <Card className="card-hover group cursor-pointer h-full flex flex-col justify-between">
               <CardHeader className="pb-4">
                 <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center group-hover:from-purple-600 group-hover:to-indigo-700 transition-all duration-300">
-                  <Calendar className="h-8 w-8 text-white" />
+                  <BriefcaseMedical className="h-8 w-8 text-white" />
                 </div>
                 <CardTitle className="text-2xl">Pharmacist</CardTitle>
                 <CardDescription className="text-base">

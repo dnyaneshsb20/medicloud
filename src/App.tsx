@@ -17,6 +17,7 @@ import DoctorDashboard from "./pages/DoctorDashboard";
 import NotFound from "./pages/NotFound";
 import PharmacistLogin from "./pages/PharmacistLogin";
 import PharmacistRegister from "./pages/PharmacistRegister";
+import PharmacistDashboard from "./pages/PharmacistDashboard";
 
 const queryClient = new QueryClient();
 
@@ -29,7 +30,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/login" element={<PatientLogin />} />
+            <Route path="/patient/login" element={<PatientLogin />} />
             <Route path="/patient/register" element={<PatientRegister />} />
             <Route 
               path="/patient/dashboard" 
@@ -55,7 +56,7 @@ const App = () => (
               path="/pharmacist/dashboard" 
               element={
                 <ProtectedRoute>
-                  <PharmacistLogin />
+                  <PharmacistDashboard />
                 </ProtectedRoute>
               } 
             />
