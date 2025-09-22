@@ -31,6 +31,7 @@ interface PatientProfile {
   address: string;
   emergency_contact: string;
   medical_history: string;
+  role?: "patient";
 }
 
 export default function PatientDashboard() {
@@ -41,9 +42,31 @@ export default function PatientDashboard() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'appointments' | 'profile'>('dashboard');
 
   useEffect(() => {
-    if (user) {
-      fetchPatientData();
-    }
+    if (!user) return;
+
+    const fetchPatientAndData = async () => {
+      // Check if the user is a patient
+      const { data: patientData } = await supabase
+        .from("patients")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!patientData) {
+        toast.error("You are not a patient");
+        setLoading(false);
+        return;
+      }
+
+      setProfile({ ...patientData, role: "patient" }); // add role to the state type
+
+      // Fetch patient-specific appointments, records, or other data here
+      await fetchPatientData(); // your existing function
+
+      setLoading(false);
+    };
+
+    fetchPatientAndData();
   }, [user]);
 
   const fetchPatientData = async () => {

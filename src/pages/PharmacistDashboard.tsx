@@ -87,26 +87,46 @@ const PharmacistDashboard = () => {
 
 
   useEffect(() => {
-    const fetchPrescriptions = async () => {
+    const fetchPharmacistData = async () => {
+      // Check if the logged-in user is a pharmacist
+      const {
+        data: pharmacistData,
+        error: pharmacistError
+      } = await supabase
+        .from("pharmacists")
+        .select("*")
+        .eq("id", user?.id)
+        .maybeSingle();
+
+      if (!pharmacistData) {
+        toast.error("You are not a pharmacist");
+        setLoading(false); // if you have a loading state
+        return;
+      }
+
+      setPharmacistName(pharmacistData.full_name);
+
+      // Fetch prescriptions for today
       const { data, error } = await supabase
         .from("medical_records")
         .select(`
-      id,
-      patient_id,
-      doctor_id,
-      created_at,
-      diagnosis,
-      medicines,
-      suggestions,
-      patients(full_name, phone),
-      doctors(id, full_name)
-    `)
+        id,
+        patient_id,
+        doctor_id,
+        created_at,
+        diagnosis,
+        medicines,
+        suggestions,
+        patients(full_name, phone),
+        doctors(id, full_name)
+      `)
         .gte("created_at", `${today}T00:00:00`)
         .lte("created_at", `${today}T23:59:59`)
         .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Error fetching prescriptions:", error);
+        toast.error("Failed to load prescriptions");
       } else {
         const formatted = data.map((record) => ({
           id: record.id,
@@ -125,30 +145,13 @@ const PharmacistDashboard = () => {
 
         setPrescriptions(formatted);
       }
+
+      setLoading(false); // if you have a loading state
     };
 
+    fetchPharmacistData();
+  }, [user]);
 
-    const fetchPharmacistName = async () => {
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        const { data, error } = await supabase
-          .from("pharmacists")
-          .select("full_name")
-          .eq("id", user.id)
-          .single();
-
-        if (!error && data) {
-          setPharmacistName(data.full_name);
-        }
-      }
-    };
-
-    fetchPrescriptions();
-    fetchPharmacistName();
-  }, []);
 
   const filtered = prescriptions.filter(
     (p) =>
@@ -238,31 +241,31 @@ const PharmacistDashboard = () => {
     }
   };
   // Utility: convert dosage like "1-0-1" to number of doses per day
-const getDosesPerDay = (pattern: string): number => {
-  return pattern
-    .split('-')
-    .map((n) => parseInt(n))
-    .filter((n) => !isNaN(n))
-    .reduce((a, b) => a + b, 0);
-};
+  const getDosesPerDay = (pattern: string): number => {
+    return pattern
+      .split('-')
+      .map((n) => parseInt(n))
+      .filter((n) => !isNaN(n))
+      .reduce((a, b) => a + b, 0);
+  };
 
-// Utility: extract duration in days from string like "5 Days"
-const getDurationInDays = (duration: string): number => {
-  const match = duration.match(/\d+/);
-  return match ? parseInt(match[0]) : 0;
-};
+  // Utility: extract duration in days from string like "5 Days"
+  const getDurationInDays = (duration: string): number => {
+    const match = duration.match(/\d+/);
+    return match ? parseInt(match[0]) : 0;
+  };
 
-// Final utility: calculate quantity
-const calculateQuantity = (dosage: string, duration: string) => {
-  const timesPerDay = dosage
-    .split("-")
-    .reduce((sum, val) => sum + parseInt(val || "0"), 0);
+  // Final utility: calculate quantity
+  const calculateQuantity = (dosage: string, duration: string) => {
+    const timesPerDay = dosage
+      .split("-")
+      .reduce((sum, val) => sum + parseInt(val || "0"), 0);
 
-  const daysMatch = duration.match(/\d+/); // Extract the number from "4 Days"
-  const numberOfDays = daysMatch ? parseInt(daysMatch[0]) : 0;
+    const daysMatch = duration.match(/\d+/); // Extract the number from "4 Days"
+    const numberOfDays = daysMatch ? parseInt(daysMatch[0]) : 0;
 
-  return timesPerDay * numberOfDays;
-};
+    return timesPerDay * numberOfDays;
+  };
 
 
   const handleGenerateBill = async () => {
@@ -286,16 +289,16 @@ const calculateQuantity = (dosage: string, duration: string) => {
     }
 
     // 3. Calculate medicine-wise details
- const medicinesWithQty = selectedPrescription?.medicines?.map((med: any) => {
-  const rate = medicineData.find((m) => m.name === med.name)?.price || 0;
-  const quantity = calculateQuantity(med.dosage, med.duration);
-  return {
-    ...med,
-    rate,
-    quantity,
-    total: quantity * rate,
-  };
-}) || [];
+    const medicinesWithQty = selectedPrescription?.medicines?.map((med: any) => {
+      const rate = medicineData.find((m) => m.name === med.name)?.price || 0;
+      const quantity = calculateQuantity(med.dosage, med.duration);
+      return {
+        ...med,
+        rate,
+        quantity,
+        total: quantity * rate,
+      };
+    }) || [];
 
     // 4. Calculate grand total
     const medicinesTotal = medicinesWithQty.reduce((sum, m) => sum + m.total, 0);

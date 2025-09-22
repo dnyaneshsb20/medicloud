@@ -34,6 +34,7 @@ interface DoctorProfile {
   consultation_fee: number;
   available_from: string;
   available_to: string;
+   role?: "doctor";
 }
 
 interface Patient {
@@ -73,59 +74,94 @@ export default function DoctorDashboard() {
 
 
   useEffect(() => {
-    if (user) {
-      fetchDoctorData(); // your existing doctor profile fetch
+    if (!user) return;
+
+    const fetchDoctorAndPatients = async () => {
+      // Check if the user is a doctor
+      const { data: doctorData } = await supabase
+        .from("doctors")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!doctorData) {
+        toast.error("You are not a doctor");
+        setLoading(false);
+        return;
+      }
+
+      setProfile({ ...doctorData, role: "doctor" });
+
+      // Fetch appointments for this doctor
+      const { data: appointmentsData, error: appointmentsError } = await supabase
+        .from("appointments")
+        .select(`
+        *,
+        patients (
+          full_name,
+          phone,
+          date_of_birth
+        )
+      `)
+        .eq("doctor_id", user.id)
+        .order("appointment_date", { ascending: true });
+
+      if (appointmentsError) {
+        console.error("Error fetching appointments:", appointmentsError);
+        toast.error("Failed to load appointments");
+      } else {
+        setAppointments(appointmentsData || []);
+      }
 
       // Fetch patients for this doctor
-      const fetchPatients = async () => {
-        setIsLoadingPatients(true);
+      setIsLoadingPatients(true);
 
-        const { data, error } = await supabase
-          .from("medical_records")
-          .select(`
-      patient_id,
-      patients (
-        id,
-        full_name,
-        email,
-        phone,
-        date_of_birth,
-        gender
-      ),
-      created_at
-    `)
-          .eq("doctor_id", user.id);
+      const { data: recordsData, error: recordsError } = await supabase
+        .from("medical_records")
+        .select(`
+        patient_id,
+        patients (
+          id,
+          full_name,
+          email,
+          phone,
+          date_of_birth,
+          gender
+        ),
+        created_at
+      `)
+        .eq("doctor_id", user.id);
 
-        if (error) {
-          console.error("Error fetching patients:", error);
-        } else {
-          const patientMap: Record<string, any> = {};
-          data?.forEach((record: any) => {
-            const p = record.patients;
-            if (!p) return;
+      if (recordsError) {
+        console.error("Error fetching patients:", recordsError);
+      } else {
+        const patientMap: Record<string, any> = {};
+        recordsData?.forEach((record: any) => {
+          const p = record.patients;
+          if (!p) return;
 
-            if (!patientMap[p.id]) {
-              patientMap[p.id] = {
-                ...p,
-                records_count: 1,
-                last_recorded: record.created_at,
-              };
-            } else {
-              patientMap[p.id].records_count += 1;
-              if (record.created_at > patientMap[p.id].last_recorded) {
-                patientMap[p.id].last_recorded = record.created_at;
-              }
+          if (!patientMap[p.id]) {
+            patientMap[p.id] = {
+              ...p,
+              records_count: 1,
+              last_recorded: record.created_at,
+            };
+          } else {
+            patientMap[p.id].records_count += 1;
+            if (record.created_at > patientMap[p.id].last_recorded) {
+              patientMap[p.id].last_recorded = record.created_at;
             }
-          });
+          }
+        });
 
-          setPatients(Object.values(patientMap)); // update state
-        }
+        setPatients(Object.values(patientMap));
+      }
 
-        setIsLoadingPatients(false);
-      };
+      setIsLoadingPatients(false);
+      setLoading(false);
+    };
 
-      fetchPatients();
-    }
+    fetchDoctorAndPatients();
   }, [user]);
 
   const fetchDoctorData = async () => {
