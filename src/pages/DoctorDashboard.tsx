@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Users, Clock, FileText, User, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Appointment {
   id: string;
@@ -65,6 +66,11 @@ export default function DoctorDashboard() {
   });
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoadingPatients, setIsLoadingPatients] = useState(true);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [patientRecords, setPatientRecords] = useState<any[]>([]);
+  const [isRecordsLoading, setIsRecordsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
 
   useEffect(() => {
     if (user) {
@@ -203,14 +209,29 @@ export default function DoctorDashboard() {
     if (hour < 18) return 'Good Afternoon';
     return 'Good Evening';
   };
-  // Inside your component, above the return()
-  const viewPatientDetails = (patientId: string) => {
-    // For now, just log it
-    console.log("View details for patient:", patientId);
 
-    // TODO: You can open a modal or navigate to a patient detail page
+  // Fetch medical records for a patient
+  const fetchPatientRecords = async (patientId: string) => {
+    try {
+      setIsRecordsLoading(true);
+      setSelectedPatientId(patientId);
+      setIsModalOpen(true);
+
+      const { data, error } = await supabase
+        .from("medical_records")
+        .select("*")
+        .eq("patient_id", patientId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setPatientRecords(data || []);
+    } catch (err) {
+      console.error("Error fetching patient records:", err);
+    } finally {
+      setIsRecordsLoading(false);
+    }
   };
-
 
   return (
     <div className="min-h-screen bg-background bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
@@ -389,32 +410,61 @@ export default function DoctorDashboard() {
 
         {/* All Patients Tab */}
         {activeTab === 'patients' && (
-          <div className="flex flex-col items-center space-y-6 w-full">
-            <h2 className="text-2xl font-bold text-center w-full max-w-5xl">My Patients</h2>
+          <div className="w-full mx-auto">
+            <h2 className="text-2xl font-bold mb-4 text-foreground">My Patients</h2>
 
             {isLoadingPatients ? (
-              <p>Loading patients...</p>
+              <p className="text-muted-foreground">Loading patients...</p>
             ) : patients.length === 0 ? (
-              <p>No patients found.</p>
+              <p className="text-muted-foreground">No patients found.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 w-full max-w-5xl">
-                {patients.map((patient) => (
-                  <Card key={patient.id} className="shadow-card p-4 flex flex-col justify-between">
-                    <div className="space-y-1">
-                      <p className="font-semibold">{patient.full_name}</p>
-                      <p className="text-sm text-muted-foreground">Email: {patient.email}</p>
-                      <p className="text-sm text-muted-foreground">Phone: {patient.phone}</p>
-                      <p className="text-sm text-muted-foreground">DOB: {patient.date_of_birth}</p>
-                      <p className="text-sm text-muted-foreground">Gender: {patient.gender}</p>
-                    </div>
-                    <Button
-                      className="mt-4 w-full bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => viewPatientDetails(patient.id)}
-                    >
-                      View Details
-                    </Button>
-                  </Card>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-gray-200 rounded-lg divide-y divide-gray-200 shadow-sm">
+                  <thead className="bg-green-100">
+                    <tr>
+                      <th className="p-3 text-left text-gray-700 font-medium">Name</th>
+                      <th className="p-3 text-left text-gray-700 font-medium">Email</th>
+                      <th className="p-3 text-left text-gray-700 font-medium">Phone</th>
+                      <th className="p-3 text-left text-gray-700 font-medium">Age</th>
+                      <th className="p-3 text-left text-gray-700 font-medium">Gender</th>
+                      <th className="p-3 text-left text-gray-700 font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {patients.map((patient, idx) => {
+                      // Calculate age from DOB
+                      let age = "N/A";
+                      if (patient.date_of_birth) {
+                        const dob = new Date(patient.date_of_birth);
+                        const diffMs = Date.now() - dob.getTime();
+                        const ageDate = new Date(diffMs);
+                        age = Math.abs(ageDate.getUTCFullYear() - 1970).toString();
+                      }
+
+                      return (
+                        <tr
+                          key={patient.id}
+                          className={idx % 2 === 0 ? "bg-white hover:bg-green-50" : "bg-green-50/30 hover:bg-green-100"}
+                        >
+                          <td className="p-3 text-gray-800 font-medium">{patient.full_name}</td>
+                          <td className="p-3 text-gray-600">{patient.email}</td>
+                          <td className="p-3 text-gray-600">{patient.phone}</td>
+                          <td className="p-3 text-gray-600">{age}</td>
+                          <td className="p-3 text-gray-600">{patient.gender}</td>
+                          <td className="p-3">
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              onClick={() => fetchPatientRecords(patient.id)}
+                            >
+                              View Details
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -560,6 +610,54 @@ export default function DoctorDashboard() {
           </div>
         )}
       </div>
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Patient Medical Records</DialogTitle>
+          </DialogHeader>
+
+          {isRecordsLoading ? (
+            <p className="text-center text-gray-500">Loading records...</p>
+          ) : patientRecords.length === 0 ? (
+            <p className="text-center text-gray-500">No medical records found.</p>
+          ) : (
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              {patientRecords.map((record) => (
+                <Card key={record.id} className="p-4">
+                  <p><strong>Diagnosis:</strong> {record.diagnosis || "N/A"}</p>
+                  <p><strong>Suggestions:</strong> {record.suggestions || "N/A"}</p>
+                  <p><strong>Follow-up Date:</strong> {record.follow_up_date || "N/A"}</p>
+                  <p><strong>Date:</strong> {new Date(record.created_at).toLocaleDateString()}</p>
+                  {record.medicines && (
+                    <div className="mt-2">
+                      <strong>Medicines:</strong>
+                      <table className="w-full mt-1 border text-center">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="p-2 border">Name</th>
+                            <th className="p-2 border">Dosage</th>
+                            <th className="p-2 border">Duration</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Array.isArray(record.medicines) &&
+                            record.medicines.map((med: any, index: number) => (
+                              <tr key={index}>
+                                <td className="p-2 border">{med.name}</td>
+                                <td className="p-2 border">{med.dosage}</td>
+                                <td className="p-2 border">{med.duration}</td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
