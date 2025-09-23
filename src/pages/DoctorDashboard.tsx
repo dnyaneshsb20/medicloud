@@ -34,7 +34,7 @@ interface DoctorProfile {
   consultation_fee: number;
   available_from: string;
   available_to: string;
-   role?: "doctor";
+  role?: "doctor";
 }
 
 interface Patient {
@@ -44,10 +44,13 @@ interface Patient {
   phone: string | null;
   date_of_birth: string | null;
   gender: string | null;
-  documents_count: number;
+  documents_count: number;   // required
   last_uploaded?: string;
+  address?: string | null;
+  emergency_contact?: string | null;
+  medical_history?: string | null;
+  created_at?: string | null;
 }
-
 
 export default function DoctorDashboard() {
   const { user } = useAuth();
@@ -71,7 +74,8 @@ export default function DoctorDashboard() {
   const [patientRecords, setPatientRecords] = useState<any[]>([]);
   const [isRecordsLoading, setIsRecordsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -269,6 +273,27 @@ export default function DoctorDashboard() {
     }
   };
 
+  const viewPatientInfo = async (patientId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("patients")
+        .select("*")
+        .eq("id", patientId)
+        .single();
+
+      if (error) throw error;
+
+      setSelectedPatient({
+        ...data,
+        documents_count: 0, // provide a default value
+      });
+      setIsPatientModalOpen(true);
+    } catch (err) {
+      console.error("Error fetching patient info:", err);
+      toast.error("Failed to load patient info");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
       <Header
@@ -294,13 +319,6 @@ export default function DoctorDashboard() {
             onClick={() => setActiveTab('dashboard')}
           >
             Dashboard
-          </Button>
-          <Button
-            variant={activeTab === 'appointments' ? 'default' : 'ghost'}
-            className={`flex-1 ${activeTab === 'appointments' ? 'bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800' : ''}`}
-            onClick={() => setActiveTab('appointments')}
-          >
-            Today's Appointments
           </Button>
           <Button
             variant={activeTab === 'patients' ? 'default' : 'ghost'}
@@ -418,12 +436,16 @@ export default function DoctorDashboard() {
                           </Badge>
                           {appointment.status === 'waiting' && (
                             <div className="space-x-2">
-                              <Button variant="outline" size="sm">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => viewPatientInfo(appointment.patient_id)}
+                              >
                                 View Patient
                               </Button>
                               <Button
                                 size="sm"
-                                className="bg-medical-blue hover:bg-medical-blue-light text-white"
+                                className="bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800 text-white"
                               >
                                 Start Consultation
                               </Button>
@@ -691,6 +713,30 @@ export default function DoctorDashboard() {
                 </Card>
               ))}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Patient Modal */}
+      <Dialog open={isPatientModalOpen} onOpenChange={setIsPatientModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Patient Information</DialogTitle>
+          </DialogHeader>
+
+          {selectedPatient ? (
+            <div className="space-y-2">
+              <p><strong>Name:</strong> {selectedPatient.full_name}</p>
+              <p><strong>Email:</strong> {selectedPatient.email}</p>
+              <p><strong>Phone:</strong> {selectedPatient.phone || "N/A"}</p>
+              <p><strong>Date of Birth:</strong> {selectedPatient.date_of_birth ? new Date(selectedPatient.date_of_birth).toLocaleDateString() : "N/A"}</p>
+              <p><strong>Gender:</strong> {selectedPatient.gender || "N/A"}</p>
+              <p><strong>Address:</strong> {selectedPatient.address || "N/A"}</p>
+              <p><strong>Emergency Contact:</strong> {selectedPatient.emergency_contact || "N/A"}</p>
+              <p><strong>Medical History:</strong> {selectedPatient.medical_history || "N/A"}</p>
+            </div>
+          ) : (
+            <p className="text-center text-gray-500">Loading patient info...</p>
           )}
         </DialogContent>
       </Dialog>
