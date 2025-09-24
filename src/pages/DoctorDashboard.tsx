@@ -21,6 +21,8 @@ interface Appointment {
     full_name: string;
     phone: string;
     date_of_birth: string;
+    email: string;
+    gender: string;
   };
 }
 
@@ -76,6 +78,55 @@ export default function DoctorDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  // Consultation modal
+  const [isConsultModalOpen, setIsConsultModalOpen] = useState(false);
+  const [consultPatient, setConsultPatient] = useState<Patient | null>(null);
+
+  // Prescription form state
+  const [prescription, setPrescription] = useState({
+    diagnosis: "",
+    medicines: [{ name: "", dosage: "", duration: "" }],
+    suggestions: "",
+    followUpDate: "",
+  });
+  const [medicineOptions, setMedicineOptions] = useState<string[]>([]); // fetch or hardcode your medicine names
+  const [dosageOptions, setDosageOptions] = useState<string[]>([]); // example dosages
+  useEffect(() => {
+    if (!isConsultModalOpen) return; // only fetch when modal opens
+
+    const fetchMedicineAndDosageOptions = async () => {
+      try {
+        // Fetch medicine names
+        const { data: medicinesData, error: medicinesError } = await supabase
+          .from("medicine_names")
+          .select("name");
+
+        if (medicinesError) {
+          console.error("Error fetching medicine names:", medicinesError);
+        } else if (medicinesData) {
+          setMedicineOptions(medicinesData.map((m: any) => m.name));
+        }
+
+        // Fetch dosages
+        const { data: dosagesData, error: dosagesError } = await supabase
+          .from("dosages")
+          .select("*"); // adjust column name if different
+
+        if (dosagesError) {
+          console.error("Error fetching dosages:", dosagesError);
+        } else if (dosagesData) {
+          setDosageOptions(dosagesData.map((d: any) => d.schedule_pattern));
+        }
+
+      } catch (err) {
+        console.error("Error fetching medicine or dosage options:", err);
+      }
+    };
+
+    fetchMedicineAndDosageOptions();
+  }, [isConsultModalOpen]);
+
+
 
   useEffect(() => {
     if (!user) return;
@@ -104,7 +155,9 @@ export default function DoctorDashboard() {
         patients (
           full_name,
           phone,
-          date_of_birth
+          date_of_birth,
+          email,
+          gender
         )
       `)
         .eq("doctor_id", user.id)
@@ -190,7 +243,9 @@ export default function DoctorDashboard() {
           patients (
             full_name,
             phone,
-            date_of_birth
+            date_of_birth,
+            email,
+            gender
           )
         `)
         .eq('doctor_id', user.id)
@@ -273,7 +328,9 @@ export default function DoctorDashboard() {
     }
   };
 
-  const viewPatientInfo = async (patientId: string) => {
+  const viewPatientInfo = async (patientId: string | null) => {
+    if (!patientId) return; // skip if null
+
     try {
       const { data, error } = await supabase
         .from("patients")
@@ -282,16 +339,26 @@ export default function DoctorDashboard() {
         .single();
 
       if (error) throw error;
-
-      setSelectedPatient({
-        ...data,
-        documents_count: 0, // provide a default value
-      });
+      setSelectedPatient({ ...data, documents_count: 0 });
       setIsPatientModalOpen(true);
     } catch (err) {
       console.error("Error fetching patient info:", err);
       toast.error("Failed to load patient info");
     }
+  };
+
+  const startConsultation = (patient: Patient) => {
+    setConsultPatient(patient);
+
+    // Reset the prescription form
+    setPrescription({
+      diagnosis: "",
+      medicines: [{ name: "", dosage: "", duration: "" }],
+      suggestions: "",
+      followUpDate: "",
+    });
+
+    setIsConsultModalOpen(true);
   };
 
   return (
@@ -446,9 +513,20 @@ export default function DoctorDashboard() {
                               <Button
                                 size="sm"
                                 className="bg-gradient-to-r from-green-600 to-emerald-700 text-white hover:from-green-700 hover:to-emerald-800 text-white"
+                                onClick={() => startConsultation({
+                                  id: appointment.patient_id,
+                                  full_name: appointment.patients?.full_name || "",
+                                  email: appointment.patients?.email || "",
+                                  phone: appointment.patients?.phone || null,
+                                  date_of_birth: appointment.patients?.date_of_birth || null,
+                                  gender: appointment.patients?.gender || null,
+                                  documents_count: 0,
+                                })}
+
                               >
                                 Start Consultation
                               </Button>
+
                             </div>
                           )}
                         </div>
@@ -737,6 +815,159 @@ export default function DoctorDashboard() {
             </div>
           ) : (
             <p className="text-center text-gray-500">Loading patient info...</p>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isConsultModalOpen} onOpenChange={setIsConsultModalOpen}>
+        <DialogContent className="max-w-4xl h-[600px] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Start Consultation</DialogTitle>
+          </DialogHeader>
+
+          {/* Scrollable content */}
+          {consultPatient && (
+            <div className="overflow-y-auto flex-1 space-y-4 px-2">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                {/* Left column */}
+                <div className="space-y-2">
+                  <p>
+                    <strong>Patient:</strong> {consultPatient.full_name}
+                  </p>
+                  <p>
+                    <strong>Symptoms:</strong>{" "}
+                    {waitingPatients.find((p) => p.patient_id === consultPatient.id)?.symptoms || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Time:</strong>{" "}
+                    {waitingPatients.find((p) => p.patient_id === consultPatient.id)?.appointment_time || "N/A"}
+                  </p>
+                </div>
+
+                {/* Right column */}
+                <div className="space-y-2">
+                  <p>
+                    <strong>Medical History:</strong>{" "}
+                    {consultPatient.medical_history && consultPatient.medical_history.trim() !== ""
+                      ? consultPatient.medical_history
+                      : "N/A"}
+                  </p>
+                  <p>
+                    <strong>Age:</strong>{" "}
+                    {consultPatient.date_of_birth
+                      ? Math.floor(
+                        (new Date().getTime() -
+                          new Date(consultPatient.date_of_birth).getTime()) /
+                        (365.25 * 24 * 60 * 60 * 1000)
+                      )
+                      : "N/A"}
+                  </p>
+                  <p>
+                    <strong>Gender:</strong> {consultPatient.gender || "N/A"}
+                  </p>
+                </div>
+              </div>
+
+              <Input
+                placeholder="Diagnosis"
+                value={prescription.diagnosis}
+                onChange={(e) => setPrescription({ ...prescription, diagnosis: e.target.value })}
+              />
+
+              <div>
+                <p className="font-medium mb-2">Medicines</p>
+                {prescription.medicines.map((med, index) => (
+                  <div key={index} className="flex gap-2 mb-2">
+                    <select
+                      className="border rounded px-2"
+                      value={med.name}
+                      onChange={(e) => {
+                        const meds = [...prescription.medicines];
+                        meds[index].name = e.target.value;
+                        setPrescription({ ...prescription, medicines: meds });
+                      }}
+                    >
+                      <option value="">Select Medicine</option>
+                      {medicineOptions.map((m) => <option key={m} value={m}>{m}</option>)}
+                    </select>
+
+                    <select
+                      className="border rounded px-2"
+                      value={med.dosage}
+                      onChange={(e) => {
+                        const meds = [...prescription.medicines];
+                        meds[index].dosage = e.target.value;
+                        setPrescription({ ...prescription, medicines: meds });
+                      }}
+                    >
+                      <option value="">Select Dosage</option>
+                      {dosageOptions.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+
+                    <Input
+                      placeholder="Duration"
+                      type="number"
+                      value={med.duration}
+                      className="w-50"
+                      onChange={(e) => {
+                        const meds = [...prescription.medicines];
+                        meds[index].duration = e.target.value;
+                        setPrescription({ ...prescription, medicines: meds });
+                      }}
+                    />
+                    <span className="text-center mt-1">Days</span>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={prescription.medicines.length === 1}
+                      onClick={() => {
+                        const meds = [...prescription.medicines];
+                        meds.splice(index, 1); // remove the medicine at current index
+                        setPrescription({ ...prescription, medicines: meds });
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPrescription({
+                    ...prescription,
+                    medicines: [...prescription.medicines, { name: "", dosage: "", duration: "" }]
+                  })}
+                >
+                  + Add Medicine
+                </Button>
+              </div>
+
+              <Input
+                placeholder="Suggestions"
+                value={prescription.suggestions}
+                onChange={(e) => setPrescription({ ...prescription, suggestions: e.target.value })}
+              />
+
+              <Input
+                type="date"
+                value={prescription.followUpDate}
+                onChange={(e) => setPrescription({ ...prescription, followUpDate: e.target.value })}
+              />
+
+              <div className="flex justify-end gap-2 mt-4">
+                <Button onClick={() => setIsConsultModalOpen(false)} variant="outline">Cancel</Button>
+                <Button
+                  className="bg-medical-green text-white"
+                  onClick={() => {
+                    console.log("Save prescription:", prescription);
+                    setIsConsultModalOpen(false);
+                    toast.success("Prescription saved");
+                  }}
+                >
+                  Save Prescription
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
