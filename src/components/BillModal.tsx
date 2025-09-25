@@ -15,11 +15,20 @@ interface BillModalProps {
   onClose: () => void;
   billId: string;
   date: string;
+  time: string; // add time if you want to display it
   patientName: string;
   doctorName: string;
-  medicines: Medicine[];
   consultationFee: number;
+  medicines: {
+    name: string;
+    dosage: string;
+    duration: string;
+    rate: number;
+    quantity: number;
+    total: number;
+  }[];
 }
+
 
 const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, patientName, doctorName, medicines, consultationFee }) => {
   const grandTotal = medicines.reduce((total, item) => total + item.rate * item.quantity, 0);

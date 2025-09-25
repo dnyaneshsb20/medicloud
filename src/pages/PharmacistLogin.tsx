@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pill, Mail, Lock } from "lucide-react"; // Pill icon for pharmacist
+import { Pill, Mail, Lock } from "lucide-react"; 
 import { useAuth } from "@/components/auth/AuthProvider";
+import { toast } from "sonner";
 // import { supabase } from "@/supabase/supabaseClient"; // Not needed if no role checks
 
 const PharmacistLogin = () => {
@@ -32,7 +33,9 @@ const PharmacistLogin = () => {
 
     // 🔹 Role check removed for now
     // Future: verify user.id exists in pharmacists table
-
+    toast.success("Login successful! Redirecting...", {
+      style: { background: "#dcfce7", color: "#166534" }, // green success toast
+    });
     navigate("/pharmacist/dashboard");
     setIsLoading(false);
   };

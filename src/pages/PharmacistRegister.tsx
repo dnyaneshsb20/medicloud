@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pill } from "lucide-react";
+import toast from "react-hot-toast";
 
 const PharmacistRegister = () => {
   const navigate = useNavigate();
@@ -34,10 +35,13 @@ const PharmacistRegister = () => {
 
     if (error) {
       setError(error.message);
-    } else {
-      alert("Registration successful! Please login.");
-      navigate("/pharmacist-login");
     }
+    toast.success("Login successful! Redirecting...", {
+      style: { background: "#dcfce7", color: "#166534" }, // green success toast
+    });
+    setTimeout(() => {
+      navigate("/pharmacist/login");
+    }, 1500);
   };
 
   return (

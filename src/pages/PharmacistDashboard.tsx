@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { toast, useToast } from "@/hooks/use-toast";
 import BillModal from '@/components/BillModal';
 import { format } from "date-fns";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const insertBill = async ({
   patient_id,
@@ -50,6 +51,11 @@ const insertBill = async ({
   }
 };
 
+interface Medicine {
+  name: string;
+  dosage: string;
+  duration: string;
+}
 interface Prescription {
   id: string;
   patient_id: string;
@@ -59,12 +65,14 @@ interface Prescription {
     phone: string;
   };
   doctor: {
+    doctor_id: string;
     full_name: string;
   };
   created_at: string;
   diagnosis: string;
-  medicines: any;
+  medicines: Medicine[];
   suggestions: string;
+  follow_up_date?: string;
 }
 
 const PharmacistDashboard = () => {
@@ -83,74 +91,95 @@ const PharmacistDashboard = () => {
   const [type, setType] = useState('');
   const [isBillOpen, setIsBillOpen] = useState(false);
   const [billDetails, setBillDetails] = useState<any>(null);
-
-
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchPharmacistData = async () => {
-      // Check if the logged-in user is a pharmacist
-      const {
-        data: pharmacistData,
-        error: pharmacistError
-      } = await supabase
+      setLoading(true);
+
+      // 1) Verify logged-in user is a pharmacist
+      const { data: pharmacistData, error: pharmacistError } = await supabase
         .from("pharmacists")
         .select("*")
         .eq("id", user?.id)
         .maybeSingle();
 
       if (!pharmacistData) {
-        toast.error("You are not a pharmacist");
-        setLoading(false); // if you have a loading state
+        toast({
+          title: "Error",
+          description: "You are not a pharmacist",
+          variant: "destructive",
+        });
+        setLoading(false);
         return;
       }
-
       setPharmacistName(pharmacistData.full_name);
 
-      // Fetch prescriptions for today
-      const { data, error } = await supabase
+      // 2) Fetch today's medical_records and bring related patient + doctor rows
+      const { data: records, error } = await supabase
         .from("medical_records")
         .select(`
         id,
         patient_id,
         doctor_id,
-        created_at,
+        appointment_id,
         diagnosis,
         medicines,
         suggestions,
-        patients(full_name, phone),
-        doctors(id, full_name)
+        follow_up_date,
+        created_at,
+        patients ( full_name, phone ),
+        doctors  ( id, full_name )
       `)
         .gte("created_at", `${today}T00:00:00`)
         .lte("created_at", `${today}T23:59:59`)
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Error fetching prescriptions:", error);
-        toast.error("Failed to load prescriptions");
-      } else {
-        const formatted = data.map((record) => ({
+        console.error("Error fetching medical records:", error);
+        toast({
+          title: "Error",
+          description: "Could not fetch today's medical records",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // 3) Map response into the Prescription shape; handle both array/object relation shapes
+      const formatted = (records || []).map((record: any) => {
+        // Supabase/PostgREST sometimes returns related rows as an object or array.
+        const patientObj = Array.isArray(record.patients) ? record.patients[0] : record.patients;
+        const doctorObj = Array.isArray(record.doctors) ? record.doctors[0] : record.doctors;
+
+        return {
           id: record.id,
           patient_id: record.patient_id,
           doctor_id: record.doctor_id,
           created_at: record.created_at,
           diagnosis: record.diagnosis,
           suggestions: record.suggestions,
-          medicines: record.medicines,
-          patient: record.patients,
-          doctor: {
-            doctor_id: record.doctor_id,
-            full_name: record.doctors.full_name,
+          medicines: record.medicines || [],
+          follow_up_date: record.follow_up_date,
+          patient: {
+            full_name: patientObj?.full_name || "Unknown",
+            phone: patientObj?.phone || "N/A",
           },
-        }));
+          doctor: {
+            doctor_id: doctorObj?.id || record.doctor_id,
+            full_name: doctorObj?.full_name || "Unknown Doctor",
+          },
+        } as Prescription;
+      });
 
-        setPrescriptions(formatted);
-      }
-
-      setLoading(false); // if you have a loading state
+      setPrescriptions(formatted);
+      setLoading(false);
     };
 
-    fetchPharmacistData();
-  }, [user]);
+    // only run if user is available
+    if (user) fetchPharmacistData();
+  }, [user, today]);
 
 
   const filtered = prescriptions.filter(
@@ -161,7 +190,13 @@ const PharmacistDashboard = () => {
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (!error) {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
       window.location.href = "/";
     }
   };
@@ -232,6 +267,7 @@ const PharmacistDashboard = () => {
       toast({
         title: "Success",
         description: "Medicine Added Successfully!",
+        style: { background: "#dcfce7", color: "#166534" }
       });
       // Clear form and close modal
       setName("");
@@ -317,12 +353,12 @@ const PharmacistDashboard = () => {
       doctorName: selectedPrescription.doctor.full_name,
       medicines: medicinesWithQty,
       grandTotal,
+      consultationFee: 0,
     });
 
     // 6. Show the modal
     setIsBillOpen(true);
   };
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50">
@@ -430,8 +466,8 @@ const PharmacistDashboard = () => {
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-1">
             {pharmacistName
-              ? `${getTimeGreeting()}, ${pharmacistName} 👋`
-              : "Welcome, Pharmacist 👋"}
+              ? `${getTimeGreeting()}! ${pharmacistName}`
+              : "Welcome, Pharmacist"}
           </h2>
           <p className="text-gray-600">View and track patient prescriptions</p>
         </div>
@@ -479,7 +515,7 @@ const PharmacistDashboard = () => {
                       <div className="text-gray-800 space-y-2 leading-relaxed">
                         <div className="flex items-center space-x-2">
                           <User className="h-4 w-4" />
-                          <span>Doctor: {record.doctor.full_name}</span>
+                          <span>Doctor: Dr. {record.doctor.full_name}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Phone className="h-4 w-4" />
@@ -522,43 +558,52 @@ const PharmacistDashboard = () => {
           </DialogHeader>
 
           {selectedPrescription && (
-            <div className="border rounded-md p-5 bg-white text-gray-800 text-base space-y-4 leading-relaxed">
-              <div>
-                <strong className="text-gray-900">Diagnosis:</strong>{" "}
-                {selectedPrescription.diagnosis}
-              </div>
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              <Card className="p-4">
+                <p>
+                  <strong>Diagnosis:</strong>{" "}
+                  {selectedPrescription.diagnosis || "N/A"}
+                </p>
+                <p>
+                  <strong>Suggestions:</strong>{" "}
+                  {selectedPrescription.suggestions || "N/A"}
+                </p>
+                <p>
+                  <strong>Follow-up Date:</strong>{" "}
+                  {selectedPrescription.follow_up_date
+                    ? new Date(selectedPrescription.follow_up_date).toLocaleDateString()
+                    : "N/A"}
+                </p>
+                <p>
+                  <strong>Date:</strong>{" "}
+                  {new Date(selectedPrescription.created_at).toLocaleDateString()}
+                </p>
 
-              <div>
-                <strong className="text-gray-900">Medicines:</strong>
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  {Array.isArray(selectedPrescription.medicines) ? (
-                    selectedPrescription.medicines.map((med: any, idx: number) => (
-                      <li key={idx} className="text-gray-700">
-                        {med.name} – {med.dosage} – {med.duration}
-                      </li>
-                    ))
-                  ) : (
-                    <li>{JSON.stringify(selectedPrescription.medicines)}</li>
-                  )}
-                </ul>
-              </div>
-
-              <div>
-                <strong className="text-gray-900">Suggestions:</strong>{" "}
-                {selectedPrescription.suggestions}
-              </div>
-
-              {selectedPrescription.follow_up_date && (
-                <div>
-                  <strong className="text-gray-900">Follow-up Date:</strong>{" "}
-                  {new Date(selectedPrescription.follow_up_date).toLocaleDateString()}
-                </div>
-              )}
-
-              <div>
-                <strong className="text-gray-900">Record Date:</strong>{" "}
-                {new Date(selectedPrescription.created_at).toLocaleDateString()}
-              </div>
+                {selectedPrescription.medicines && (
+                  <div className="mt-2">
+                    <strong>Medicines:</strong>
+                    <table className="w-full mt-1 border text-center">
+                      <thead>
+                        <tr className="bg-gray-100">
+                          <th className="p-2 border">Name</th>
+                          <th className="p-2 border">Dosage</th>
+                          <th className="p-2 border">Duration</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Array.isArray(selectedPrescription.medicines) &&
+                          selectedPrescription.medicines.map((med: any, idx: number) => (
+                            <tr key={idx}>
+                              <td className="p-2 border">{med.name}</td>
+                              <td className="p-2 border">{med.dosage}</td>
+                              <td className="p-2 border">{med.duration}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
             </div>
           )}
           <Button
@@ -579,6 +624,7 @@ const PharmacistDashboard = () => {
           patientName={billDetails.patientName}
           doctorName={billDetails.doctorName}
           medicines={billDetails.medicines} // ✅ Correct data passed
+          consultationFee={billDetails.consultationFee}
         />
       )}
 

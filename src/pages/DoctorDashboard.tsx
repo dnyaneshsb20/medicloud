@@ -819,7 +819,7 @@ export default function DoctorDashboard() {
         </DialogContent>
       </Dialog>
       <Dialog open={isConsultModalOpen} onOpenChange={setIsConsultModalOpen}>
-        <DialogContent className="max-w-4xl h-[600px] flex flex-col">
+        <DialogContent className="max-w-4xl h-[630px] flex flex-col">
           <DialogHeader>
             <DialogTitle>Start Consultation</DialogTitle>
           </DialogHeader>
@@ -867,6 +867,7 @@ export default function DoctorDashboard() {
                 </div>
               </div>
 
+              <p className="font-medium mb-2">Diagnosis</p>
               <Input
                 placeholder="Diagnosis"
                 value={prescription.diagnosis}
@@ -942,12 +943,14 @@ export default function DoctorDashboard() {
                 </Button>
               </div>
 
+              <p className="font-medium mb-2">Suggestions</p>
               <Input
                 placeholder="Suggestions"
                 value={prescription.suggestions}
                 onChange={(e) => setPrescription({ ...prescription, suggestions: e.target.value })}
               />
 
+              <p className="font-medium mb-2">Follow Up Date</p>
               <Input
                 type="date"
                 value={prescription.followUpDate}
@@ -958,10 +961,70 @@ export default function DoctorDashboard() {
                 <Button onClick={() => setIsConsultModalOpen(false)} variant="outline">Cancel</Button>
                 <Button
                   className="bg-medical-green text-white"
-                  onClick={() => {
-                    console.log("Save prescription:", prescription);
-                    setIsConsultModalOpen(false);
-                    toast.success("Prescription saved");
+                  onClick={async () => {
+                    if (!consultPatient || !profile) return;
+
+                    // Find the appointment ID for this patient in waitingPatients
+                    const appointment = waitingPatients.find(p => p.patient_id === consultPatient.id);
+                    if (!appointment) {
+                      toast.error("Appointment not found",{
+                        style: { background: "#dcfce7", color: "#ec2323ff" },
+                      });
+                      return;
+                    }
+
+                    try {
+                      const { error } = await supabase
+                        .from("medical_records")
+                        .insert([{
+                          patient_id: consultPatient.id,
+                          doctor_id: profile.id,
+                          appointment_id: appointment.id,
+                          diagnosis: prescription.diagnosis,
+                          medicines: prescription.medicines,
+                          suggestions: prescription.suggestions,
+                          follow_up_date: prescription.followUpDate || null,
+                        }]);
+
+                      if (error) {
+                        console.error("Error saving prescription:", error);
+                        toast.error("Failed to save prescription", {
+                          style: { background: "#dcfce7", color: "#ec2323ff" },
+                        });
+                        return;
+                      }
+
+                      const { error: statusError } = await supabase
+                        .from("appointments")
+                        .update({ status: "consulted" })
+                        .eq("id", appointment.id);
+
+                      if (statusError) {
+                        toast.error("Prescription saved but failed to update appointment status", {
+                          style: { background: "#dcfce7", color: "#ec2323ff" },
+                        });
+                        return;
+                      }
+
+                      // 4. Update local state
+                      setAppointments(prev =>
+                        prev.map(a =>
+                          a.id === appointment.id ? { ...a, status: "consulted" } : a
+                        )
+                      );
+
+                      // Close the modal after saving
+                      toast.success("Prescription saved successfully!", {
+                        style: { background: "#dcfce7", color: "#166534" },
+                      });
+                      setIsConsultModalOpen(false);
+
+                    } catch (err: any) {
+                      console.error("Unexpected error:", err);
+                      toast.error("Failed to save prescription",{
+                        style: { background: "#dcfce7", color: "#ec2323ff" },
+                      });
+                    }
                   }}
                 >
                   Save Prescription
