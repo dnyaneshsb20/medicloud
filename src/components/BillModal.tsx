@@ -148,22 +148,7 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
                       </td>
                     )}
                     <td className="p-2 border">{index + 1}</td>
-                    <td className="p-2 border">
-                      {isEditing && isSelected ? (
-                        <input
-                          type="text"
-                          value={med.name}
-                          className="border p-1 w-full"
-                          onChange={(e) => {
-                            const updated = [...editedMedicines];
-                            updated[index].name = e.target.value;
-                            setEditedMedicines(updated);
-                          }}
-                        />
-                      ) : (
-                        med.name
-                      )}
-                    </td>
+                    <td className="p-2 border">{med.name}</td>
                     <td className="p-2 border">₹{med.rate}</td>
                     <td className="p-2 border">
                       {isEditing && isSelected ? (
@@ -195,11 +180,11 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
         </div>
 
         <div className="mt-4 flex justify-end space-x-4">
-          <Button onClick={() => setIsEditing(!isEditing)}>
+          <Button onClick={() => setIsEditing(!isEditing)} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">
             {isEditing ? "Save Changes" : "Update Items"}
           </Button>
-          <Button onClick={handleDownloadPDF}>Download PDF</Button>
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={handleDownloadPDF} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">Download PDF</Button>
+          <Button onClick={onClose} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">Close</Button>
         </div>
       </DialogContent>
     </Dialog>
