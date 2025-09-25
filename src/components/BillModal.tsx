@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
+import { supabase } from "@/supabase/supabaseClient";
+import { toast } from "sonner";
 
 interface Medicine {
   name: string;
@@ -18,7 +20,8 @@ interface BillModalProps {
   time: string; // add time if you want to display it
   patientName: string;
   doctorName: string;
-  consultationFee: number;
+  patientId: string;
+  doctorId: string;
   medicines: {
     name: string;
     dosage: string;
@@ -30,12 +33,13 @@ interface BillModalProps {
 }
 
 
-const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, patientName, doctorName, medicines, consultationFee }) => {
+const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, patientName, doctorName, medicines, patientId, doctorId, }) => {
   const grandTotal = medicines.reduce((total, item) => total + item.rate * item.quantity, 0);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [editedMedicines, setEditedMedicines] = useState<Medicine[]>([...medicines]);
   const [currentTime, setCurrentTime] = useState("");
+  const [paymentMode, setPaymentMode] = useState("");
 
   useEffect(() => {
     if (isOpen) {
@@ -45,10 +49,46 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
     }
   }, [isOpen]);
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
+    if (!paymentMode) {
+      toast.error("Please select a payment method!", {
+        style: { background: "#fee2e2", color: "#b91c1c" },
+      });
+      return; // stop execution if not selected
+    }
+
     const doc = new jsPDF();
     let y = 20;
 
+    // Calculate medicine cost and total amount
+    const medicineCost = medicines.reduce((sum, med) => sum + med.rate * med.quantity, 0);
+    const totalAmount = medicineCost; // consultation fee removed
+
+    // Save bill to Supabase
+    const { data, error } = await supabase
+      .from('bills')
+      .insert([
+        {
+          patient_id: patientId,
+          doctor_id: doctorId,
+          medicine_cost: medicineCost,
+          total_amount: totalAmount,
+          status: 'Paid',
+          payment_mode: paymentMode
+        }
+      ]);
+
+    if (error) {
+      toast.error("Error in Saving Bill !", {
+        style: { background: "#fee2e2", color: "#b91c1c" },
+      });
+    } else {
+      toast.success("Bill Saved Sucessfully !", {
+        style: { background: "#dcfce7", color: "#166534" },
+      });
+    }
+
+    // PDF Header
     doc.setFontSize(18);
     doc.text("MediCloud Bill", 14, y);
     y += 10;
@@ -63,6 +103,7 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
     doc.text(`Doctor Name: ${doctorName}`, 14, y);
     y += 10;
 
+    // Table Header
     doc.setFont(undefined, "bold");
     doc.text("S.No", 14, y);
     doc.text("Medicine", 30, y);
@@ -70,9 +111,9 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
     doc.text("Qty", 120, y);
     doc.text("Total", 140, y);
     doc.setFont(undefined, "normal");
-
     y += 7;
 
+    // Table Rows
     medicines.forEach((med, index) => {
       doc.text(`${index + 1}`, 14, y);
       doc.text(med.name, 30, y);
@@ -85,16 +126,17 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
 
     y += 10;
     doc.setFont(undefined, "bold");
-
     y += 3;
-    doc.text(`Grand Total: ₹${grandTotal}`, 14, y);
+    doc.text(`Grand Total: ₹${totalAmount}`, 14, y);
 
+    // Save PDF
     doc.save(`MediCloud-Bill-${billId}.pdf`);
+    onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl p-6" aria-describedby="bill-description">
+      <DialogContent className="max-w-3xl p-6 h-[550px]" aria-describedby="bill-description">
         <DialogHeader>
           <DialogTitle className="flex justify-center items-center space-x-2 text-2xl font-bold text-indigo-700">
             <div className="bg-blue-600 text-white rounded-lg px-2 py-1 font-bold text-xl">M</div>
@@ -102,7 +144,7 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex justify-between text-sm mt-2 mb-4">
+        <div className="flex justify-between text-sm">
           <div>
             <p><strong>Bill No:</strong> {billId}</p>
             <p><strong>Patient Name:</strong> {patientName}</p>
@@ -175,15 +217,33 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
           </table>
         </div>
 
-        <div className="mt-4 text-right text-lg font-semibold">
-          Final Amount to Pay: ₹{grandTotal}
+        <div className="flex justify-between items-center mb-4">
+          {/* Payment Method Dropdown */}
+          <div>
+            <label className="mr-2 font-medium">Payment Mode:</label>
+            <select
+              value={paymentMode}
+              onChange={(e) => setPaymentMode(e.target.value)}
+              className="border rounded p-1 w-28"
+            >
+              <option value="">-- Select --</option>
+              <option value="Cash">Cash</option>
+              <option value="UPI">UPI</option>
+              <option value="Card">Card</option>
+            </select>
+          </div>
+
+          {/* Final Amount */}
+          <div className="mt-1 text-right text-lg font-semibold">
+            Final Amount to Pay: ₹{grandTotal}
+          </div>
         </div>
 
-        <div className="mt-4 flex justify-end space-x-4">
+        <div className="mt-auto flex justify-end space-x-4">
           <Button onClick={() => setIsEditing(!isEditing)} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">
             {isEditing ? "Save Changes" : "Update Items"}
           </Button>
-          <Button onClick={handleDownloadPDF} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">Download PDF</Button>
+          <Button onClick={handleDownloadPDF} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">Save Bill and Download PDF</Button>
           <Button onClick={onClose} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">Close</Button>
         </div>
       </DialogContent>

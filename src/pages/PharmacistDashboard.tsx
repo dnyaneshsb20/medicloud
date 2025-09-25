@@ -351,9 +351,10 @@ const PharmacistDashboard = () => {
       time: format(new Date(selectedPrescription.created_at), "HH:mm"),
       patientName: selectedPrescription.patient.full_name,
       doctorName: selectedPrescription.doctor.full_name,
+      patientId: selectedPrescription.patient_id,   // ✅ add this
+      doctorId: selectedPrescription.doctor_id,
       medicines: medicinesWithQty,
       grandTotal,
-      consultationFee: 0,
     });
 
     // 6. Show the modal
@@ -623,8 +624,9 @@ const PharmacistDashboard = () => {
           time={billDetails.time}
           patientName={billDetails.patientName}
           doctorName={billDetails.doctorName}
-          medicines={billDetails.medicines} // ✅ Correct data passed
-          consultationFee={billDetails.consultationFee}
+          patientId={billDetails.patientId}
+          doctorId={billDetails.doctorId}
+          medicines={billDetails.medicines}
         />
       )}
 
