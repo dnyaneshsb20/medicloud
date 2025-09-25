@@ -361,6 +361,12 @@ const PharmacistDashboard = () => {
     setIsBillOpen(true);
   };
 
+  const closeBothModals = () => {
+    setIsBillOpen(false); // Close BillModal
+    setShowDialog(false); // Close Prescription modal
+    setSelectedPrescription(null); // Clear selection
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50">
       <header className="bg-white/80 backdrop-blur-md shadow-sm border-b">
@@ -618,7 +624,7 @@ const PharmacistDashboard = () => {
       {billDetails && (
         <BillModal
           isOpen={isBillOpen}
-          onClose={() => setIsBillOpen(false)}
+          onClose={closeBothModals}
           billId={billDetails.billId}
           date={billDetails.date}
           time={billDetails.time}
