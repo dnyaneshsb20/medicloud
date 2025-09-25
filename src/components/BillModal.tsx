@@ -40,6 +40,13 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
   const [editedMedicines, setEditedMedicines] = useState<Medicine[]>([...medicines]);
   const [currentTime, setCurrentTime] = useState("");
   const [paymentMode, setPaymentMode] = useState("");
+  const medicinesJSON = editedMedicines.map(med => ({
+    name: med.name,
+    rate: med.rate,
+    quantity: med.quantity,
+    total: med.rate * med.quantity
+  }));
+
 
   useEffect(() => {
     if (isOpen) {
@@ -50,19 +57,25 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
   }, [isOpen]);
 
   const handleDownloadPDF = async () => {
+    // Validate payment mode
     if (!paymentMode) {
       toast.error("Please select a payment method!", {
         style: { background: "#fee2e2", color: "#b91c1c" },
       });
-      return; // stop execution if not selected
+      return;
     }
 
-    const doc = new jsPDF();
-    let y = 20;
-
     // Calculate medicine cost and total amount
-    const medicineCost = medicines.reduce((sum, med) => sum + med.rate * med.quantity, 0);
-    const totalAmount = medicineCost; // consultation fee removed
+    const medicineCost = editedMedicines.reduce((sum, med) => sum + med.rate * med.quantity, 0);
+    const totalAmount = medicineCost; // add consultation fee if needed
+
+    // Prepare JSON to save in DB
+    const medicinesJSON = editedMedicines.map(med => ({
+      name: med.name,
+      rate: med.rate,
+      quantity: med.quantity,
+      total: med.rate * med.quantity
+    }));
 
     // Save bill to Supabase
     const { data, error } = await supabase
@@ -73,22 +86,27 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
           doctor_id: doctorId,
           medicine_cost: medicineCost,
           total_amount: totalAmount,
-          status: 'Paid',
-          payment_mode: paymentMode
+          status: 'Paid', // or 'Unpaid' depending on your logic
+          payment_mode: paymentMode,
+          medicines: medicinesJSON
         }
       ]);
 
     if (error) {
-      toast.error("Error in Saving Bill !", {
+      toast.error("Error in saving bill!", {
         style: { background: "#fee2e2", color: "#b91c1c" },
       });
+      return;
     } else {
-      toast.success("Bill Saved Sucessfully !", {
+      toast.success("Bill saved successfully!", {
         style: { background: "#dcfce7", color: "#166534" },
       });
     }
 
-    // PDF Header
+    // Generate PDF
+    const doc = new jsPDF();
+    let y = 20;
+
     doc.setFontSize(18);
     doc.text("MediCloud Bill", 14, y);
     y += 10;
@@ -100,10 +118,10 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
     doc.text(`Patient Name: ${patientName}`, 14, y);
     doc.text(`Time: ${currentTime}`, 150, y, { align: "right" });
     y += 7;
-    doc.text(`Doctor Name: ${doctorName}`, 14, y);
+    doc.text(`Doctor Name: Dr. ${doctorName}`, 14, y);
     y += 10;
 
-    // Table Header
+    // Table header
     doc.setFont(undefined, "bold");
     doc.text("S.No", 14, y);
     doc.text("Medicine", 30, y);
@@ -113,24 +131,25 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
     doc.setFont(undefined, "normal");
     y += 7;
 
-    // Table Rows
-    medicines.forEach((med, index) => {
+    // Table rows from editedMedicines
+    editedMedicines.forEach((med, index) => {
       doc.text(`${index + 1}`, 14, y);
       doc.text(med.name, 30, y);
       doc.text(`₹${med.rate}`, 100, y);
       doc.text(`${med.quantity}`, 120, y);
-      const itemTotal = med.total ?? med.rate * med.quantity;
+      const itemTotal = med.rate * med.quantity;
       doc.text(`₹${itemTotal}`, 140, y);
       y += 7;
     });
 
     y += 10;
     doc.setFont(undefined, "bold");
-    y += 3;
     doc.text(`Grand Total: ₹${totalAmount}`, 14, y);
 
     // Save PDF
     doc.save(`MediCloud-Bill-${billId}.pdf`);
+
+    // Close modal
     onClose();
   };
 
