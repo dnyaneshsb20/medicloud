@@ -118,7 +118,7 @@ interface Prescription {
   medicines: Medicine[];
   suggestions: string;
   follow_up_date?: string;
-   hasBill?: boolean;
+  hasBill?: boolean;
 }
 
 const PharmacistDashboard = () => {
@@ -390,17 +390,17 @@ const PharmacistDashboard = () => {
     console.log("Medicines With Qty", medicinesWithQty);
     console.log("Medicines with Qty:", medicinesWithQty);
     console.log("Grand Total:", grandTotal);
-  // 3. Save the bill in Supabase
-  const savedBill = await insertBill({
-    patient_id: selectedPrescription.patient_id,
-    doctor_id: selectedPrescription.doctor_id,
-    medicine_cost: medicinesTotal,
-    total_amount: grandTotal,
-    prescription_id: selectedPrescription.id,
-     medicines: medicinesWithQty,  
-  });
+    // 3. Save the bill in Supabase
+    const savedBill = await insertBill({
+      patient_id: selectedPrescription.patient_id,
+      doctor_id: selectedPrescription.doctor_id,
+      medicine_cost: medicinesTotal,
+      total_amount: grandTotal,
+      prescription_id: selectedPrescription.id,
+      medicines: medicinesWithQty,
+    });
 
-  if (!savedBill) return; 
+    if (!savedBill) return;
 
     // 5. Set bill details
     setBillDetails({
@@ -413,7 +413,7 @@ const PharmacistDashboard = () => {
       doctorId: selectedPrescription.doctor_id,
       medicines: savedBill.medicines,
       grandTotal,
-      prescriptionId: selectedPrescription.id, 
+      prescriptionId: selectedPrescription.id,
     });
 
     // 6. Show the modal
@@ -461,6 +461,19 @@ const PharmacistDashboard = () => {
       )
     );
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 p-[2px] bg-gradient-to-r from-purple-600 to-indigo-700 mx-auto mb-4">
+            <div className="h-full w-full rounded-full bg-background"></div>
+          </div>
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50">

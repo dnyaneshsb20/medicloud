@@ -203,7 +203,9 @@ export default function PatientDashboard() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-medical-blue mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 p-[2px] bg-gradient-to-r from-blue-500 to-blue-600 mx-auto mb-4">
+            <div className="h-full w-full rounded-full bg-background"></div>
+          </div>
           <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
