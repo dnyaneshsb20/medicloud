@@ -29,6 +29,19 @@ interface Appointment {
   };
 }
 
+interface Bill {
+  id: string;
+  appointment_id: string;
+  patient_id: string;
+  doctor_id: string;
+  medicines: { name: string; rate: number; quantity: number }[]; // adjust if your table has more fields
+  total_amount: number;
+  created_at: string;
+  status: string;
+  payment_mode?: string;
+}
+
+
 interface UserProfile {
   id: string;
   full_name: string;
@@ -55,6 +68,9 @@ export default function PatientDashboard() {
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [appointmentRecord, setAppointmentRecord] = useState<any>(null);
   const [isRecordLoading, setIsRecordLoading] = useState(false);
+  const [isBillModalOpen, setIsBillModalOpen] = useState(false);
+  const [billData, setBillData] = useState<any>(null);
+  const [latestAppointments, setLatestAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -110,32 +126,49 @@ export default function PatientDashboard() {
 
     try {
       // 🔹 Fetch patient profile
-      // (Future Role Check could go here to confirm `user.id` belongs to a patient)
       const { data: patientData, error: profileError } = await supabase
         .from('patients')
         .select('*')
-        .eq('id', user.id) // <-- relies only on logged-in user id
+        .eq('id', user.id)
         .single();
 
       if (profileError) throw profileError;
       setProfile({ ...patientData, role: "patient" });
 
-      // 🔹 Fetch appointments with doctor info
-      // (Future Role Check could go here to confirm only patients access their appointments)
+      // 🔹 Fetch all appointments with doctor info
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
         .select(`
-          *,
-          doctors (
-            full_name,
-            specialization
-          )
-        `)
-        .eq('patient_id', user.id) // <-- again tied to logged-in user id
+        *,
+        doctors (
+          full_name,
+          specialization
+        )
+      `)
+        .eq('patient_id', user.id)
         .order('appointment_date', { ascending: true });
 
       if (appointmentsError) throw appointmentsError;
       setAppointments(appointmentsData || []);
+
+      // 🔹 Fetch the 2 most recent appointments (any status: waiting/consulted)
+      const { data: latestAppointmentsData, error: latestAppointmentsError } = await supabase
+        .from('appointments')
+        .select(`
+        *,
+        doctors (
+          full_name,
+          specialization
+        )
+      `)
+        .eq('patient_id', user.id)
+        .order('appointment_date', { ascending: false })
+        .order('appointment_time', { ascending: false })
+        .limit(2);
+
+      if (latestAppointmentsError) throw latestAppointmentsError;
+
+      setLatestAppointments(latestAppointmentsData || []);
 
     } catch (error: any) {
       console.error('Error fetching patient data:', error);
@@ -147,7 +180,7 @@ export default function PatientDashboard() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'confirmed':
+      case 'consulted':
         return 'bg-medical-green text-white';
       case 'completed':
         return 'bg-medical-blue text-white';
@@ -209,7 +242,6 @@ export default function PatientDashboard() {
       setIsRecordLoading(false);
     }
   };
-
 
   return (
     <div className="min-h-screen bg-background bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200">
@@ -323,21 +355,25 @@ export default function PatientDashboard() {
                 <CardTitle>Recent Appointments</CardTitle>
               </CardHeader>
               <CardContent>
-                {recentAppointments.length > 0 ? (
+                {latestAppointments.length > 0 ? (
                   <div className="space-y-4">
-                    {recentAppointments.map((appointment) => (
-                      <div key={appointment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    {latestAppointments.map((appointment) => (
+                      <div
+                        key={appointment.id}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
                         <div className="flex items-center space-x-4">
                           <div className="w-12 h-12 bg-medical-blue/10 rounded-full flex items-center justify-center">
                             <User className="w-6 h-6 text-medical-blue" />
                           </div>
                           <div>
-                            <p className="font-semibold">{appointment.doctors?.full_name}</p>
+                            <p className="font-semibold">Dr. {appointment.doctors?.full_name}</p>
                             <p className="text-sm text-muted-foreground">
                               {appointment.doctors?.specialization}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              {new Date(appointment.appointment_date).toLocaleDateString()} at {appointment.appointment_time}
+                              {new Date(appointment.appointment_date).toLocaleDateString()} at{" "}
+                              {appointment.appointment_time}
                             </p>
                           </div>
                         </div>
@@ -392,51 +428,68 @@ export default function PatientDashboard() {
               <CardContent className="p-6">
                 {appointments.length > 0 ? (
                   <div className="space-y-4">
-                    {appointments.map((appointment) => (
-                      <div
-                        key={appointment.id}
-                        className="flex items-center justify-between p-6 border rounded-lg hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-medical-blue/10 rounded-full flex items-center justify-center">
-                            <User className="w-6 h-6 text-medical-blue" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-lg">
-                              Dr. {appointment.doctors?.full_name}
-                            </p>
-                            <p className="text-muted-foreground">
-                              {appointment.doctors?.specialization}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(
-                                appointment.appointment_date
-                              ).toLocaleDateString()}{" "}
-                              at {appointment.appointment_time}
-                            </p>
-                            {appointment.symptoms && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Symptoms: {appointment.symptoms}
+                    {appointments
+                      .slice() // create a copy to avoid mutating state
+                      .sort((a, b) => {
+                        // Sort by date descending (latest first)
+                        const dateA = new Date(a.appointment_date);
+                        const dateB = new Date(b.appointment_date);
+
+                        // If same date, put consulted first
+                        if (dateB.getTime() === dateA.getTime()) {
+                          if (a.status === "consulted" && b.status !== "consulted") return -1;
+                          if (b.status === "consulted" && a.status !== "consulted") return 1;
+                        }
+
+                        return dateB.getTime() - dateA.getTime();
+                      })
+                      .map((appointment) => (
+                        <div
+                          key={appointment.id}
+                          className="flex items-center justify-between p-6 border rounded-lg hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-medical-blue/10 rounded-full flex items-center justify-center">
+                              <User className="w-6 h-6 text-medical-blue" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-lg">
+                                Dr. {appointment.doctors?.full_name}
                               </p>
+                              <p className="text-muted-foreground">
+                                {appointment.doctors?.specialization}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(appointment.appointment_date).toLocaleDateString()}{" "}
+                                at {appointment.appointment_time}
+                              </p>
+                              {appointment.symptoms && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  Symptoms: {appointment.symptoms}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right space-x-1">
+                            <Badge className={getStatusColor(appointment.status)}>
+                              {appointment.status}
+                            </Badge>
+                            <Button
+                              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+                            >
+                              View Bill
+                            </Button>
+                            {appointment.status === "consulted" && (
+                              <Button
+                                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
+                                onClick={() => handleViewPrescription(appointment.id)}
+                              >
+                                View Prescription
+                              </Button>
                             )}
                           </div>
                         </div>
-                        <div className="text-right space-x-1">
-                          <Badge className={getStatusColor(appointment.status)}>
-                            {appointment.status}
-                          </Badge>
-                          {appointment.status === "consulted" && (
-                            <Button
-                              variant="outline"
-                              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
-                              onClick={() => handleViewPrescription(appointment.id)}
-                            >
-                              View Prescription
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 ) : (
                   <div className="text-center py-12">
