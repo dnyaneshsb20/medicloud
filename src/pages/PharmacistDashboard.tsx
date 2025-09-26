@@ -12,43 +12,88 @@ import BillModal from '@/components/BillModal';
 import { format } from "date-fns";
 import { useAuth } from "@/components/auth/AuthProvider";
 
+// const insertBill = async ({
+//   patient_id,
+//   doctor_id,
+//   consultation_fee,
+//   medicine_cost,
+// }: {
+//   patient_id: string;
+//   doctor_id: string;
+//   consultation_fee: number;
+//   medicine_cost: number;
+// }) => {
+//   const total_amount = consultation_fee + medicine_cost;
+
+//   const { error } = await supabase.from("bills").insert([
+//     {
+//       patient_id,
+//       doctor_id,
+//       consultation_fee,
+//       medicine_cost,
+//       total_amount,
+//       status: "unpaid",
+//     },
+//   ]);
+
+//   if (error) {
+//     console.error("Error inserting bill:", error.message);
+//     toast({
+//       title: "Error",
+//       description: "Failed to generate bill",
+//       variant: "destructive",
+//     });
+//   } else {
+//     toast({
+//       title: "Success",
+//       description: "Bill generated successfully",
+//     });
+//   }
+// };
+
 const insertBill = async ({
   patient_id,
   doctor_id,
-  consultation_fee,
   medicine_cost,
+  total_amount,
+  prescription_id,
+  medicines,
 }: {
   patient_id: string;
   doctor_id: string;
-  consultation_fee: number;
   medicine_cost: number;
+  total_amount: number;
+  prescription_id?: string;
+  medicines: any[];
 }) => {
-  const total_amount = consultation_fee + medicine_cost;
-
-  const { error } = await supabase.from("bills").insert([
+  const { error, data } = await supabase.from("bills").insert([
     {
       patient_id,
       doctor_id,
-      consultation_fee,
       medicine_cost,
       total_amount,
+      prescription_id, // optional: link to medical record
+      medicines,
       status: "unpaid",
     },
-  ]);
+  ]).select("*");
 
   if (error) {
-    console.error("Error inserting bill:", error.message);
+    console.error("Error inserting bill:", error);
     toast({
       title: "Error",
       description: "Failed to generate bill",
       variant: "destructive",
     });
-  } else {
-    toast({
-      title: "Success",
-      description: "Bill generated successfully",
-    });
+    return;
   }
+
+  toast({
+    title: "Success",
+    description: "Bill generated successfully",
+  });
+
+  return data[0];
 };
 
 interface Medicine {
@@ -73,6 +118,7 @@ interface Prescription {
   medicines: Medicine[];
   suggestions: string;
   follow_up_date?: string;
+   hasBill?: boolean;
 }
 
 const PharmacistDashboard = () => {
@@ -130,7 +176,8 @@ const PharmacistDashboard = () => {
         follow_up_date,
         created_at,
         patients ( full_name, phone ),
-        doctors  ( id, full_name )
+        doctors  ( id, full_name ),
+        bills ( id )
       `)
         .gte("created_at", `${today}T00:00:00`)
         .lte("created_at", `${today}T23:59:59`)
@@ -170,6 +217,7 @@ const PharmacistDashboard = () => {
             doctor_id: doctorObj?.id || record.doctor_id,
             full_name: doctorObj?.full_name || "Unknown Doctor",
           },
+          hasBill: record.bills && record.bills.length > 0,
         } as Prescription;
       });
 
@@ -342,19 +390,30 @@ const PharmacistDashboard = () => {
     console.log("Medicines With Qty", medicinesWithQty);
     console.log("Medicines with Qty:", medicinesWithQty);
     console.log("Grand Total:", grandTotal);
+  // 3. Save the bill in Supabase
+  const savedBill = await insertBill({
+    patient_id: selectedPrescription.patient_id,
+    doctor_id: selectedPrescription.doctor_id,
+    medicine_cost: medicinesTotal,
+    total_amount: grandTotal,
+    prescription_id: selectedPrescription.id,
+     medicines: medicinesWithQty,  
+  });
 
+  if (!savedBill) return; 
 
     // 5. Set bill details
     setBillDetails({
-      billId: selectedPrescription.id,
+      billId: savedBill.id,
       date: format(new Date(selectedPrescription.created_at), "dd-MM-yyyy"),
       time: format(new Date(selectedPrescription.created_at), "HH:mm"),
       patientName: selectedPrescription.patient.full_name,
       doctorName: selectedPrescription.doctor.full_name,
       patientId: selectedPrescription.patient_id,   // ✅ add this
       doctorId: selectedPrescription.doctor_id,
-      medicines: medicinesWithQty,
+      medicines: savedBill.medicines,
       grandTotal,
+      prescriptionId: selectedPrescription.id, 
     });
 
     // 6. Show the modal
@@ -365,6 +424,42 @@ const PharmacistDashboard = () => {
     setIsBillOpen(false); // Close BillModal
     setShowDialog(false); // Close Prescription modal
     setSelectedPrescription(null); // Clear selection
+  };
+  const handleViewBill = async (appointmentId: string) => {
+    const { data, error } = await supabase
+      .from("bills")
+      .select("*")
+      .eq("appointment_id", appointmentId)
+      .single();
+
+    if (error || !data) {
+      toast({
+        title: "Error",
+        description: "Could not fetch bill",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Set bill details for BillModal
+    setBillDetails({
+      billId: data.id,
+      date: format(new Date(data.created_at), "dd-MM-yyyy"),
+      time: format(new Date(data.created_at), "HH:mm"),
+      patientName: selectedPrescription?.patient.full_name,
+      doctorName: selectedPrescription?.doctor.full_name,
+      patientId: data.patient_id,
+      doctorId: data.doctor_id,
+      medicines: data.medicines,
+    });
+    setIsBillOpen(true);
+  };
+  const handleBillSaved = (appointmentId: string) => {
+    setPrescriptions((prev) =>
+      prev.map((p) =>
+        p.id === appointmentId ? { ...p, hasBill: true } : p
+      )
+    );
   };
 
   return (
@@ -547,6 +642,18 @@ const PharmacistDashboard = () => {
                       <Eye className="h-4 w-4 mr-1" />
                       View Prescription
                     </Button>
+                    {record.hasBill && (
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-green-600 to-emerald-700 text-white"
+                        onClick={async () => {
+                          setSelectedPrescription(record);
+                          await handleViewBill(record.id);
+                        }}
+                      >
+                        View Bill
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))
@@ -615,10 +722,14 @@ const PharmacistDashboard = () => {
           )}
           <Button
             onClick={handleGenerateBill}
-            className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800"
+            disabled={selectedPrescription?.hasBill} // 👈 disable if bill exists
+            className={`bg-gradient-to-r from-purple-600 to-indigo-700 text-white 
+    hover:from-purple-700 hover:to-indigo-800
+    ${selectedPrescription?.hasBill ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             Generate Bill
           </Button>
+
         </DialogContent>
       </Dialog>
       {billDetails && (
@@ -633,6 +744,7 @@ const PharmacistDashboard = () => {
           patientId={billDetails.patientId}
           doctorId={billDetails.doctorId}
           medicines={billDetails.medicines}
+          onBillSaved={handleBillSaved}
         />
       )}
 

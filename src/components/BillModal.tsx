@@ -30,10 +30,11 @@ interface BillModalProps {
     quantity: number;
     total: number;
   }[];
+  onBillSaved?: (appointmentId: string) => void;
 }
 
 
-const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, patientName, doctorName, medicines, patientId, doctorId, }) => {
+const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, patientName, doctorName, medicines, patientId, doctorId,  onBillSaved, }) => {
   const grandTotal = medicines.reduce((total, item) => total + item.rate * item.quantity, 0);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
@@ -84,6 +85,7 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
         {
           patient_id: patientId,
           doctor_id: doctorId,
+          appointment_id: billId,
           medicine_cost: medicineCost,
           total_amount: totalAmount,
           status: 'Paid', // or 'Unpaid' depending on your logic
@@ -101,6 +103,9 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
       toast.success("Bill saved successfully!", {
         style: { background: "#dcfce7", color: "#166534" },
       });
+      if (onBillSaved) {
+        onBillSaved(billId);
+      }
     }
 
     // Generate PDF

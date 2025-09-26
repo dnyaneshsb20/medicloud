@@ -18,15 +18,36 @@ interface Doctor {
   available_from: string;
   available_to: string;
 }
-const convertTo24Hour = (timeStr: string) => {
-  const [time, modifier] = timeStr.split(' ');
-  let [hours, minutes] = time.split(':').map(Number);
+/**
+ * Converts 12-hour time (e.g., "02:30 PM") to 24-hour format ("14:30")
+ * Returns empty string if input is invalid
+ */
+const convertTo24Hour = (time?: string): string => {
+  if (!time || typeof time !== "string") {
+    console.warn("convertTo24Hour received invalid time:", time);
+    return "";
+  }
 
-  if (modifier === 'PM' && hours < 12) hours += 12;
-  if (modifier === 'AM' && hours === 12) hours = 0;
+  // Match format like "hh:mm AM/PM"
+  const match = time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) {
+    console.warn("convertTo24Hour: time format invalid:", time);
+    return "";
+  }
 
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const meridian = match[3].toUpperCase();
+
+  if (meridian === "PM" && hours < 12) hours += 12;
+  if (meridian === "AM" && hours === 12) hours = 0;
+
+  // Pad hours with leading zero if needed
+  const hoursStr = hours.toString().padStart(2, "0");
+
+  return `${hoursStr}:${minutes}`;
 };
+
 interface AppointmentBookingProps {
   onBookingSuccess?: () => void;
 }
