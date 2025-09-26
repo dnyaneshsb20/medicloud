@@ -466,9 +466,8 @@ const PharmacistDashboard = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 p-[2px] bg-gradient-to-r from-purple-600 to-indigo-700 mx-auto mb-4">
-            <div className="h-full w-full rounded-full bg-background"></div>
-          </div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-transparent 
+      [border-image:linear-gradient(to_right,#9333ea,#3730a3)_1] mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
