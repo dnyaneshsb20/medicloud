@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar, Clock, Search, User, Phone, LogOut, Eye, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { toast, useToast } from "@/hooks/use-toast";
 import BillModal from '@/components/BillModal';
 import { format } from "date-fns";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { toast } from "sonner";
 
 // const insertBill = async ({
 //   patient_id,
@@ -80,17 +80,14 @@ const insertBill = async ({
 
   if (error) {
     console.error("Error inserting bill:", error);
-    toast({
-      title: "Error",
-      description: "Failed to generate bill",
-      variant: "destructive",
+    toast.error("Failed to Generate Bill!", {
+      style: { background: "#fee2e2", color: "#b91c1c" },
     });
     return;
   }
 
-  toast({
-    title: "Success",
-    description: "Bill generated successfully",
+  toast.success("Login successful! Redirecting...", {
+    style: { background: "#dcfce7", color: "#166534" },
   });
 
   return data[0];
@@ -120,6 +117,13 @@ interface Prescription {
   follow_up_date?: string;
   hasBill?: boolean;
 }
+interface PharmacistProfile {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  created_at: string;
+}
 
 const PharmacistDashboard = () => {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -139,6 +143,17 @@ const PharmacistDashboard = () => {
   const [billDetails, setBillDetails] = useState<any>(null);
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [billMode, setBillMode] = useState<"view" | "edit">("edit");
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [profile, setProfile] = useState<PharmacistProfile>({
+    id: "",
+    full_name: "",
+    email: "",
+    phone: null,
+    created_at: "",
+  });
+  const [formData, setFormData] = useState<Partial<PharmacistProfile>>({});
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const fetchPharmacistData = async () => {
@@ -152,10 +167,8 @@ const PharmacistDashboard = () => {
         .maybeSingle();
 
       if (!pharmacistData) {
-        toast({
-          title: "Error",
-          description: "You are not a pharmacist",
-          variant: "destructive",
+        toast.error("You're not Pharmacist!", {
+          style: { background: "#fee2e2", color: "#b91c1c" },
         });
         setLoading(false);
         return;
@@ -185,10 +198,8 @@ const PharmacistDashboard = () => {
 
       if (error) {
         console.error("Error fetching medical records:", error);
-        toast({
-          title: "Error",
-          description: "Could not fetch today's medical records",
-          variant: "destructive",
+        toast.error("Could not fecth today's medical records!", {
+          style: { background: "#fee2e2", color: "#b91c1c" },
         });
         setLoading(false);
         return;
@@ -239,10 +250,8 @@ const PharmacistDashboard = () => {
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
+      toast.error("Error:" + error.message, {
+        style: { background: "#fee2e2", color: "#b91c1c" },
       });
     } else {
       window.location.href = "/";
@@ -275,10 +284,8 @@ const PharmacistDashboard = () => {
       isNaN(parsedPrice) ||
       parsedPrice <= 0
     ) {
-      toast({
-        title: "Error",
-        description: "Please fill all fields correctly.",
-        variant: "destructive",
+      toast.error("Please Fill all the details Correctly!", {
+        style: { background: "#fee2e2", color: "#b91c1c" },
       });
       return;
     }
@@ -286,10 +293,8 @@ const PharmacistDashboard = () => {
     // ✅ Check type matches allowed values
     const allowedTypes = ["syrup", "tablet", "capsule", "injection", "other"];
     if (!allowedTypes.includes(trimmedType)) {
-      toast({
-        title: "Error",
-        description: "Medicine type must be: syrup, tablet, capsule, injection, or other.",
-        variant: "destructive",
+      toast.error("Medicine type must be: syrup, tablet, capsule, injection, or other.", {
+        style: { background: "#fee2e2", color: "#b91c1c" },
       });
       return;
     }
@@ -306,16 +311,12 @@ const PharmacistDashboard = () => {
     console.log("Supabase Response:", { data, error });
 
     if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add medicine: " + error.message,
-        variant: "destructive",
+      toast.error("Failed to add Medicine! " + error.message, {
+        style: { background: "#fee2e2", color: "#b91c1c" },
       });
     } else {
-      toast({
-        title: "Success",
-        description: "Medicine Added Successfully!",
-        style: { background: "#dcfce7", color: "#166534" }
+      toast.success("Medicine Added Sucessfully!", {
+        style: { background: "#dcfce7", color: "#166534" }, // green success toast
       });
       // Clear form and close modal
       setName("");
@@ -364,10 +365,8 @@ const PharmacistDashboard = () => {
       .in("name", medicineNames);
 
     if (medError || !medicineData) {
-      toast({
-        title: "Error",
-        description: "Could not fetch medicine prices.",
-        variant: "destructive",
+      toast.error("Could Not Fecth Medicine Prices!", {
+        style: { background: "#fee2e2", color: "#b91c1c" },
       });
       return;
     }
@@ -418,6 +417,7 @@ const PharmacistDashboard = () => {
 
     // 6. Show the modal
     setIsBillOpen(true);
+    setBillMode("edit");
   };
 
   const closeBothModals = () => {
@@ -425,23 +425,20 @@ const PharmacistDashboard = () => {
     setShowDialog(false); // Close Prescription modal
     setSelectedPrescription(null); // Clear selection
   };
-  const handleViewBill = async (appointmentId: string) => {
+  const handleViewBill = async (prescriptionId: string) => {
     const { data, error } = await supabase
       .from("bills")
       .select("*")
-      .eq("appointment_id", appointmentId)
+      .eq("prescription_id", prescriptionId)  // 👈 use prescription_id, not appointment_id
       .single();
 
     if (error || !data) {
-      toast({
-        title: "Error",
-        description: "Could not fetch bill",
-        variant: "destructive",
+      toast.error("Could Not Fetch Bill!", {
+        style: { background: "#fee2e2", color: "#b91c1c" },
       });
       return;
     }
 
-    // Set bill details for BillModal
     setBillDetails({
       billId: data.id,
       date: format(new Date(data.created_at), "dd-MM-yyyy"),
@@ -453,7 +450,10 @@ const PharmacistDashboard = () => {
       medicines: data.medicines,
     });
     setIsBillOpen(true);
+    setBillMode("view");
   };
+
+
   const handleBillSaved = (appointmentId: string) => {
     setPrescriptions((prev) =>
       prev.map((p) =>
@@ -461,6 +461,38 @@ const PharmacistDashboard = () => {
       )
     );
   };
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error("Error fetching user:", userError?.message);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("pharmacists")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching pharmacist profile:", error.message);
+      } else {
+        setProfile(data as PharmacistProfile);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  if (!profile) {
+    return <p className="text-muted-foreground">Loading profile...</p>;
+  }
 
   if (loading) {
     return (
@@ -586,92 +618,243 @@ const PharmacistDashboard = () => {
           <p className="text-gray-600">View and track patient prescriptions</p>
         </div>
 
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search by patient or doctor name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex space-x-1 mb-8 bg-muted p-1 rounded-lg w-full bg-white">
+          <Button
+            variant={activeTab === "dashboard" ? "default" : "ghost"}
+            className={`flex-1 ${activeTab === "dashboard"
+              ? "bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800"
+              : ""
+              }`}
+            onClick={() => setActiveTab("dashboard")}
+          >
+            Dashboard
+          </Button>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5" />
-              <span>Recent Prescriptions</span>
-            </CardTitle>
-            <CardDescription>
-              All medical prescriptions created by doctors
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {filtered.length === 0 ? (
-              <p className="text-gray-500">No records found.</p>
-            ) : (
-              filtered.map((record) => (
-                <div
-                  key={record.id}
-                  className="border rounded-lg p-4 hover:bg-gray-50"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-3 text-lg">
-                      <h4 className="font-semibold text-gray-900 text-xl">
-                        {record.patient.full_name}
-                      </h4>
-                      <div className="text-gray-800 space-y-2 leading-relaxed">
-                        <div className="flex items-center space-x-2">
-                          <User className="h-4 w-4" />
-                          <span>Doctor: Dr. {record.doctor.full_name}</span>
+          <Button
+            variant={activeTab === "patients" ? "default" : "ghost"}
+            className={`flex-1 ${activeTab === "patients"
+              ? "bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800"
+              : ""
+              }`}
+            onClick={() => setActiveTab("patients")}
+          >
+            All Patients
+          </Button>
+
+          <Button
+            variant={activeTab === "profile" ? "default" : "ghost"}
+            className={`flex-1 ${activeTab === "profile"
+              ? "bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800"
+              : ""
+              }`}
+            onClick={() => setActiveTab("profile")}
+          >
+            Profile
+          </Button>
+        </div>
+
+        {activeTab === "dashboard" && (
+          <div>
+            {/* Your Dashboard Content here */}
+            <Card className="mb-6">
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search by patient or doctor name..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Calendar className="h-5 w-5" />
+                  <span>Recent Prescriptions</span>
+                </CardTitle>
+                <CardDescription>
+                  All medical prescriptions created by doctors
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {filtered.length === 0 ? (
+                  <p className="text-gray-500">No records found.</p>
+                ) : (
+                  filtered.map((record) => (
+                    <div
+                      key={record.id}
+                      className="border rounded-lg p-4 hover:bg-gray-50"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-3 text-lg">
+                          <h4 className="font-semibold text-gray-900 text-xl">
+                            {record.patient.full_name}
+                          </h4>
+                          <div className="text-gray-800 space-y-2 leading-relaxed">
+                            <div className="flex items-center space-x-2">
+                              <User className="h-4 w-4" />
+                              <span>Doctor: Dr. {record.doctor.full_name}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Phone className="h-4 w-4" />
+                              <span>{record.patient.phone}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Clock className="h-4 w-4" />
+                              <span>
+                                {new Date(record.created_at).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Phone className="h-4 w-4" />
-                          <span>{record.patient.phone}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Clock className="h-4 w-4" />
-                          <span>
-                            {new Date(record.created_at).toLocaleString()}
-                          </span>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800"
+                            onClick={() => {
+                              setSelectedPrescription(record);
+                              setShowDialog(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Prescription
+                          </Button>
+
+                          {record.hasBill && (
+                            <Button
+                              size="sm"
+                              className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800"
+                              onClick={async () => {
+                                await handleViewBill(record.id); // pass the actual bill ID
+                              }}
+                            >
+                              View Bill
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === "patients" && (
+          <div>
+            {/* Your All Patients Content here */}
+          </div>
+        )}
+
+        {activeTab === "profile" && (
+          <div>
+            {/* Your Profile Content here */}
+            <div className="space-y-6 w-full">
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle>Pharmacist Information</CardTitle>
+                </CardHeader>
+
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Full Name */}
+                    <div>
+                      <p className="text-sm text-muted-foreground">Full Name</p>
+                      {isEditing ? (
+                        <Input
+                          value={formData.full_name}
+                          onChange={(e) =>
+                            setFormData({ ...formData, full_name: e.target.value })
+                          }
+                        />
+                      ) : (
+                        <p className="font-semibold">{profile.full_name}</p>
+                      )}
+                    </div>
+
+                    {/* Email (readonly) */}
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="font-semibold">{profile.email}</p>
+                    </div>
+
+                    {/* Phone */}
+                    <div>
+                      <p className="text-sm text-muted-foreground">Phone</p>
+                      {isEditing ? (
+                        <Input
+                          value={formData.phone || ""}
+                          onChange={(e) =>
+                            setFormData({ ...formData, phone: e.target.value })
+                          }
+                        />
+                      ) : (
+                        <p className="font-semibold">
+                          {profile.phone || "Not provided"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Created At (readonly info) */}
+                  <div className="pt-4 border-t">
+                    <p className="text-sm text-muted-foreground mb-2">Joined On</p>
+                    <p className="font-semibold">
+                      {new Date(profile.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+
+                  {/* Edit / Update Button */}
+                  <div className="pt-6">
                     <Button
-                      size="sm"
                       className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800"
-                      onClick={() => {
-                        setSelectedPrescription(record);
-                        setShowDialog(true);
+                      onClick={async () => {
+                        if (isEditing) {
+                          // Update pharmacist details in Supabase
+                          const { error } = await supabase
+                            .from("pharmacists")
+                            .update({
+                              full_name: formData.full_name,
+                              phone: formData.phone,
+                            })
+                            .eq("id", profile.id);
+
+                          if (!error) {
+                            setProfile({ ...profile, ...formData }); // refresh local state
+                            setIsEditing(false);
+                            toast.success("Updated Profile Sucessfully!", {
+                              style: { background: "#dcfce7", color: "#166534" }, // green success toast
+                            });
+                          } else {
+                            alert("Error updating profile: " + error.message);
+                            toast.error("Error Updating Profile!" + error.message, {
+                              style: { background: "#fee2e2", color: "#b91c1c" },
+                            });
+                          }
+                        } else {
+                          // Enable edit mode
+                          setFormData({ ...profile });
+                          setIsEditing(true);
+                        }
                       }}
                     >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View Prescription
+                      {isEditing ? "Update Details" : "Edit Profile"}
                     </Button>
-                    {record.hasBill && (
-                      <Button
-                        size="sm"
-                        className="bg-gradient-to-r from-green-600 to-emerald-700 text-white"
-                        onClick={async () => {
-                          setSelectedPrescription(record);
-                          await handleViewBill(record.id);
-                        }}
-                      >
-                        View Bill
-                      </Button>
-                    )}
                   </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+
       </div>
 
       {/* Modal for viewing prescription */}
@@ -757,6 +940,7 @@ const PharmacistDashboard = () => {
           doctorId={billDetails.doctorId}
           medicines={billDetails.medicines}
           onBillSaved={handleBillSaved}
+          mode={billMode}
         />
       )}
 

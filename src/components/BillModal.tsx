@@ -31,10 +31,11 @@ interface BillModalProps {
     total: number;
   }[];
   onBillSaved?: (appointmentId: string) => void;
+  mode: "view" | "edit";
 }
 
 
-const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, patientName, doctorName, medicines, patientId, doctorId,  onBillSaved, }) => {
+const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, patientName, doctorName, medicines, patientId, doctorId, onBillSaved, mode }) => {
   const grandTotal = medicines.reduce((total, item) => total + item.rate * item.quantity, 0);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
@@ -78,21 +79,18 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
       total: med.rate * med.quantity
     }));
 
-    // Save bill to Supabase
+    // update bill to Supabase
     const { data, error } = await supabase
-      .from('bills')
-      .insert([
-        {
-          patient_id: patientId,
-          doctor_id: doctorId,
-          appointment_id: billId,
-          medicine_cost: medicineCost,
-          total_amount: totalAmount,
-          status: 'Paid', // or 'Unpaid' depending on your logic
-          payment_mode: paymentMode,
-          medicines: medicinesJSON
-        }
-      ]);
+      .from("bills")
+      .update({
+        status: "Paid",
+        payment_mode: paymentMode,
+        medicines: medicinesJSON,
+        medicine_cost: medicineCost,
+        total_amount: totalAmount
+      })
+      .eq("id", billId); // make sure billId here matches the existing bill's id
+
 
     if (error) {
       toast.error("Error in saving bill!", {
@@ -240,36 +238,39 @@ const BillModal: React.FC<BillModalProps> = ({ isOpen, onClose, billId, date, pa
             </tbody>
           </table>
         </div>
+        {mode !== "view" && (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              {/* Payment Method Dropdown */}
+              <div>
+                <label className="mr-2 font-medium">Payment Mode:</label>
+                <select
+                  value={paymentMode}
+                  onChange={(e) => setPaymentMode(e.target.value)}
+                  className="border rounded p-1 w-28"
+                >
+                  <option value="">-- Select --</option>
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI</option>
+                  <option value="Card">Card</option>
+                </select>
+              </div>
 
-        <div className="flex justify-between items-center mb-4">
-          {/* Payment Method Dropdown */}
-          <div>
-            <label className="mr-2 font-medium">Payment Mode:</label>
-            <select
-              value={paymentMode}
-              onChange={(e) => setPaymentMode(e.target.value)}
-              className="border rounded p-1 w-28"
-            >
-              <option value="">-- Select --</option>
-              <option value="Cash">Cash</option>
-              <option value="UPI">UPI</option>
-              <option value="Card">Card</option>
-            </select>
-          </div>
+              {/* Final Amount */}
+              <div className="mt-1 text-right text-lg font-semibold">
+                Final Amount to Pay: ₹{grandTotal}
+              </div>
+            </div>
 
-          {/* Final Amount */}
-          <div className="mt-1 text-right text-lg font-semibold">
-            Final Amount to Pay: ₹{grandTotal}
-          </div>
-        </div>
-
-        <div className="mt-auto flex justify-end space-x-4">
-          <Button onClick={() => setIsEditing(!isEditing)} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">
-            {isEditing ? "Save Changes" : "Update Items"}
-          </Button>
-          <Button onClick={handleDownloadPDF} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">Save Bill and Download PDF</Button>
-          <Button onClick={onClose} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">Close</Button>
-        </div>
+            <div className="mt-auto flex justify-end space-x-4">
+              <Button onClick={() => setIsEditing(!isEditing)} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">
+                {isEditing ? "Save Changes" : "Update Items"}
+              </Button>
+              <Button onClick={handleDownloadPDF} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">Save Bill and Download PDF</Button>
+              <Button onClick={onClose} className="bg-gradient-to-r from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800">Close</Button>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
