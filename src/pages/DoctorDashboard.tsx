@@ -967,7 +967,7 @@ export default function DoctorDashboard() {
                     // Find the appointment ID for this patient in waitingPatients
                     const appointment = waitingPatients.find(p => p.patient_id === consultPatient.id);
                     if (!appointment) {
-                      toast.error("Appointment not found",{
+                      toast.error("Appointment not found", {
                         style: { background: "#dcfce7", color: "#ec2323ff" },
                       });
                       return;
@@ -976,7 +976,7 @@ export default function DoctorDashboard() {
                     try {
                       const { error } = await supabase
                         .from("medical_records")
-                        .insert([{
+                        .upsert({
                           patient_id: consultPatient.id,
                           doctor_id: profile.id,
                           appointment_id: appointment.id,
@@ -984,7 +984,7 @@ export default function DoctorDashboard() {
                           medicines: prescription.medicines,
                           suggestions: prescription.suggestions,
                           follow_up_date: prescription.followUpDate || null,
-                        }]);
+                        }, { onConflict: 'appointment_id' });
 
                       if (error) {
                         console.error("Error saving prescription:", error);
@@ -1021,7 +1021,7 @@ export default function DoctorDashboard() {
 
                     } catch (err: any) {
                       console.error("Unexpected error:", err);
-                      toast.error("Failed to save prescription",{
+                      toast.error("Failed to save prescription", {
                         style: { background: "#dcfce7", color: "#ec2323ff" },
                       });
                     }
