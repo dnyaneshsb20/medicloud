@@ -341,7 +341,7 @@ const AppointmentBooking = ({ onBookingSuccess }: AppointmentBookingProps) => {
             />
           </div>
         </div>
-
+              {/* Button Added */}
         <Button 
           onClick={handleBookAppointment} 
           disabled={isLoading || !selectedDoctor}
