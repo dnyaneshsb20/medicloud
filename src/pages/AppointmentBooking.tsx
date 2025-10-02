@@ -140,6 +140,32 @@ const AppointmentBooking = ({ onBookingSuccess }: AppointmentBookingProps) => {
       });
       return;
     }
+    if (!appointmentData.symptoms.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter your symptoms before booking.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 🔴 Check for required appointment time
+    if (!appointmentData.appointmentTime) {
+      toast({
+        title: "Error",
+        description: "Please select an appointment time before booking.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!appointmentData.symptoms.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter your symptoms before booking.",
+        variant: "destructive",
+      });
+      return;
+    }
     const appointmentTime = convertTo24Hour(appointmentData.appointmentTime);
 
     setIsLoading(true);
@@ -341,9 +367,9 @@ const AppointmentBooking = ({ onBookingSuccess }: AppointmentBookingProps) => {
             />
           </div>
         </div>
-              {/* Button Added */}
-        <Button 
-          onClick={handleBookAppointment} 
+
+        <Button
+          onClick={handleBookAppointment}
           disabled={isLoading || !selectedDoctor}
           className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
         >
