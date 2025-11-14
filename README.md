@@ -65,6 +65,6 @@ With this software:
 ---
 
 <div align="center">
-© 2024 Dnyanesh Badave | Milk Products Management System
+© 2025 Dnyanesh Badave | MediCloud
 </div>
 
