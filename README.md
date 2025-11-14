@@ -1,73 +1,70 @@
-# Welcome to your Lovable project
+# 🩺 MediCloud
 
-## Project info
+**Type:** Web Application 
+**Language:** React, TypeScript
+**Database:** Supabase (PostgreSQL)
+**Tool:** Visual Studio Code  
+**Platform:** Web Application  
 
-**URL**: https://lovable.dev/projects/f3a8479c-f645-4e9e-8d3b-0d77331b1ac4
+---
 
-## How can I edit this code?
+## 📖 About the Project
 
-There are several ways of editing your application.
+The **MediCloud** platform is a web-based healthcare system developed to simplify daily healthcare management for doctors, patients, and pharmacists.
 
-**Use Lovable**
+Previously, healthcare management involved manual appointment tracking, paper-based medical records, and handwritten prescriptions, which were slow, error-prone, and difficult to manage.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/f3a8479c-f645-4e9e-8d3b-0d77331b1ac4) and start prompting.
+With this software:
+- Patients can book appointments online
+- Doctors can view patient records and manage consultations
+- E-prescriptions can be generated and accessed digitally
+- Pharmacists can manage medicine billing efficiently
+- Data is updated in real-time
+- Secure authentication ensures role-based access
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## ✨ Key Features
+- Separate dashboards for Doctors, Patients, and Pharmacists
+- Online appointment booking
+- Medical record management and history tracking
+- E-prescriptions generation and access
+- Medicine billing and inventory management
+- Real-time updates using Supabase
+- Secure authentication and role-based access
+- Responsive and user-friendly web design
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🛠 Technology Used
+- **Language:** React, TypeScript  
+- **Database:** Supabase (PostgreSQL)  
+- **Tool:** Visual Studio Code 
+- **Platform:** Web Application  
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## 📸 Output Screens
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+| Landing Page | Doctor Dashboard |
+| --- | --- |
+| ![Admin Login](https://github.com/dnyaneshsb20/medicloud/blob/main/public/landing-page.png) | ![Home Page](https://github.com/dnyaneshsb20/medicloud/blob/main/public/doctor-dashboard.png) |
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+| Patient Dashboard | Pharmacist Dashboard |
+| --- | --- |
+| ![Manage Product](https://github.com/dnyaneshsb20/medicloud/blob/main/public/patient-dashboard.png) | ![Manage Category](https://github.com/dnyaneshsb20/medicloud/blob/main/public/pharmacist-dashboard.png) |
 
-# Step 3: Install the necessary dependencies.
-npm i
+| Medical Records | Appoitment Booking |
+| --- | --- |
+| ![Generate Bill](https://github.com/dnyaneshsb20/medicloud/blob/main/public/medical-records.png) | ![Invoice](https://github.com/dnyaneshsb20/medicloud/blob/main/public/appointment-booking.png) |
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+| E-Prescription | Medicine Billing |
+| --- | --- |
+| ![Bill](https://github.com/dnyaneshsb20/medicloud/blob/main/public/e-Prescription.png) | ![Reports](https://github.com/dnyaneshsb20/medicloud/blob/main/public/bill.png) |
 
-**Edit a file directly in GitHub**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+<div align="center">
+© 2024 Dnyanesh Badave | Milk Products Management System
+</div>
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/f3a8479c-f645-4e9e-8d3b-0d77331b1ac4) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
